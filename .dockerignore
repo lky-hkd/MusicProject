@@ -1,0 +1,32 @@
+# 构建上下文排除
+
+# Git / IDE
+.git
+.gitignore
+.idea
+.vscode
+.trae
+*.iml
+
+# 构建产物
+target/
+build/
+
+# 本地上传文件
+uploads/
+
+# 本地敏感配置（务必排除，不能进镜像）
+.env
+application-dev.yml
+application-local.yml
+application-prod-local.yml
+src/main/resources/application-dev.yml
+
+# 文档与截图
+.screenshots/
+postman/
+.postman/
+*.md
+
+# Maven wrapper（Docker 里用 maven 镜像构建，不需要）
+.mvn/
