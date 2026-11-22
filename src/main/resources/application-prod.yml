@@ -1,0 +1,83 @@
+# =====================================================================
+# 生产环境配置
+# 所有敏感信息一律走环境变量，且【不提供默认值】——缺失即启动失败，避免误用测试密钥上生产
+# 启动：java -jar app.jar --spring.profiles.active=prod
+# =====================================================================
+server:
+  port: ${SERVER_PORT:8080}
+  # 生产建议放在 Nginx 反向代理后面，并开启以下（如直接对外可调）
+  forward-headers-strategy: framework
+
+logging:
+  level:
+    root: info
+    com.music: info
+  # 生产不打印 SQL（覆盖 application.yml 的公共 mybatis-plus 配置）
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:20}
+      minimum-idle: ${DB_POOL_MIN:5}
+      connection-timeout: 30000
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+      database: ${REDIS_DATABASE:0}
+      timeout: 3000ms
+  rabbitmq:
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+    virtual-host: ${RABBITMQ_VHOST:/}
+    connection-timeout: 10000
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        acknowledge-mode: manual
+        prefetch: 20
+        concurrency: 4
+        max-concurrency: 8
+        retry:
+          enabled: false
+
+mybatis-plus:
+  configuration:
+    # 生产关闭 SQL 打印
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+
+# 智谱 GLM API —— 必填，无默认值
+llm:
+  api-key: ${LLM_API_KEY}
+  endpoint: ${LLM_ENDPOINT:https://open.bigmodel.cn/api/paas/v4/chat/completions}
+  model-id: ${LLM_MODEL_ID:glm-4-flash}
+
+# CORS —— 生产必须显式配置真实域名，多项用逗号分隔
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS}
+
+# 支付宝 —— 生产使用正式应用密钥，全部必填无默认值
+alipay:
+  app-id: ${ALIPAY_APP_ID}
+  private-key: ${ALIPAY_PRIVATE_KEY}
+  alipay-public-key: ${ALIPAY_PUBLIC_KEY}
+  gateway-url: ${ALIPAY_GATEWAY_URL:https://openapi.alipay.com/gateway.do}
+  notify-url: ${ALIPAY_NOTIFY_URL}
+  return-url: ${ALIPAY_RETURN_URL}
+  sign-type: RSA2
+  charset: UTF-8
+
+app:
+  upload:
+    dir: ${UPLOAD_DIR:/data/uploads}
+  cookie:
+    # 生产强制 https 传输 cookie
+    secure: true

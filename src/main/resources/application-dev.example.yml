@@ -1,0 +1,72 @@
+# =====================================================================
+# 开发环境配置模板（可提交到 Git）
+# 使用方法：复制本文件为 application-dev.yml，再填入你自己的真实值
+#   Windows: copy src\main\resources\application-dev.example.yml src\main\resources\application-dev.yml
+# 真实的 application-dev.yml 已被 .gitignore 忽略，不会被提交
+# =====================================================================
+server:
+  port: 8080
+
+logging:
+  level:
+    root: info
+    com.music: debug
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL:jdbc:mysql://localhost:3306/music_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:your-db-password}
+  data:
+    redis:
+      password: ${REDIS_PASSWORD:your-redis-password}
+      database: 0
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: /
+    connection-timeout: 10000
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        acknowledge-mode: manual
+        prefetch: 20
+        concurrency: 4
+        max-concurrency: 8
+        retry:
+          enabled: false
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# 智谱 GLM API（填入你自己的 key）
+llm:
+  api-key: ${LLM_API_KEY:your-llm-api-key}
+  endpoint: ${LLM_ENDPOINT:https://open.bigmodel.cn/api/paas/v4/chat/completions}
+  model-id: ${LLM_MODEL_ID:glm-4-flash}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:*}
+
+alipay:
+  app-id: ${ALIPAY_APP_ID:your-sandbox-app-id}
+  private-key: ${ALIPAY_PRIVATE_KEY:your-app-private-key}
+  alipay-public-key: ${ALIPAY_PUBLIC_KEY:your-alipay-public-key}
+  gateway-url: https://openapi-sandbox.dl.alipaydev.com/gateway.do
+  notify-url: ${ALIPAY_NOTIFY_URL:https://your-tunnel/api/order/alipay/notify}
+  return-url: ${ALIPAY_RETURN_URL:http://localhost:8080/#/order-pay}
+  sign-type: RSA2
+  charset: UTF-8
+
+app:
+  upload:
+    dir: ${UPLOAD_DIR:uploads}
+  cookie:
+    secure: false

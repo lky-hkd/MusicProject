@@ -1,0 +1,50 @@
+﻿# =====================================================================
+# 公共配置（所有环境共享）
+# 环境相关配置见 application-dev.yml / application-prod.yml
+# 通过 --spring.profiles.active=dev|prod 或环境变量 SPRING_PROFILES_ACTIVE 指定，默认 dev
+# =====================================================================
+server:
+  port: 8080
+
+spring:
+  application:
+    name: MusicPlatform
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  web:
+    resources:
+      cache:
+        period: 3600   # 静态资源缓存 1 小时（秒）
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+# MyBatis-Plus 公共配置（SQL 日志级别在各环境覆盖）
+mybatis-plus:
+  mapper-locations: classpath:mybatis/*.xml
+  type-aliases-package: com.music.entity
+  configuration:
+    map-underscore-to-camel-case: true
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# 业务相关公共配置（与环境无关；密钥类放各环境文件）
+app:
+  upload:
+    dir: ${UPLOAD_DIR:uploads}
+  seckill:
+    hot-product-qps: ${SECKILL_HOT_QPS:20}
+    hot-product-window-seconds: ${SECKILL_HOT_WINDOW:3}
+  cookie:
+    secure: ${COOKIE_SECURE:false}
+    http-only: true
+    max-age-days: 7

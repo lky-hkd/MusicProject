@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apple Store 风格商城 (深色动态版)</title>
+    <style>
+        /* 全局样式设定 */
+        :root {
+            --bg-color: #000000;
+            --card-bg: #111111;
+            --text-primary: #f5f5f7;
+            --text-secondary: #86868b;
+            --accent-blue: #2997ff;
+            --card-radius: 20px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.4;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden; /* 防止动画导致的横向滚动条 */
+        }
+
+        /* 顶部导航栏 */
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            height: 48px;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-content {
+            display: flex;
+            gap: 30px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .nav-content span {
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .nav-content span:hover {
+            color: var(--text-primary);
+        }
+
+        /* 页面主体容器 */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 100px 20px 60px;
+        }
+
+        /* 标题区域 */
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 40px;
+        }
+
+        .header-section h1 {
+            font-size: 40px;
+            font-weight: 600;
+            letter-spacing: -1px;
+        }
+
+        .header-section .help-info {
+            text-align: right;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .header-section .help-info a {
+            color: var(--accent-blue);
+            text-decoration: none;
+        }
+
+        /* 分类图标栏 (横向滚动) */
+        .category-nav {
+            display: flex;
+            gap: 30px;
+            overflow-x: auto;
+            padding-bottom: 20px;
+            margin-bottom: 40px;
+            scrollbar-width: none;
+        }
+
+        .category-nav::-webkit-scrollbar {
+            display: none;
+        }
+
+        .category-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            min-width: 60px;
+        }
+
+        .category-item .icon-placeholder {
+            width: 50px;
+            height: 50px;
+            background-color: #333;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+        }
+
+        .category-item span {
+            font-size: 12px;
+            color: var(--text-primary);
+        }
+
+        /* 区块标题 */
+        .section-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            margin-top: 40px;
+        }
+
+        /* 网格布局 */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 1024px) {
+            .grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: repeat(2, 1fr); }
+            .header-section { flex-direction: column; align-items: flex-start; gap: 20px; }
+            .header-section .help-info { text-align: left; }
+        }
+        @media (max-width: 480px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+
+        /* 产品卡片设计 */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: var(--card-radius);
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.4s ease;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.05);
+        }
+
+        /* 新品标签 */
+        .tag-new {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #ff453a;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* 产品图片占位符 */
+        .card-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+            border-radius: 12px;
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .img-iphone { background: linear-gradient(135deg, #2c1a1a, #4a2020); }
+        .img-watch { background: linear-gradient(135deg, #1a1a1a, #333333); }
+        .img-mac { background: linear-gradient(135deg, #1a1f2c, #202a40); }
+        .img-airpods { background: linear-gradient(135deg, #f5f5f5, #e0e0e0); color: #333; }
+
+        .card-title {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .card-price {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: auto;
+        }
+
+        /* 底部 */
+        .footer {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--text-secondary);
+            font-size: 12px;
+            border-top: 1px solid #222;
+            margin-top: 60px;
+        }
+
+        /* =========================================
+           滚动显现动画 (Scroll Reveal) CSS 核心部分
+           ========================================= */
+
+        /* 需要动画的元素初始状态：透明且向下偏移30px */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            /* 使用平滑的贝塞尔曲线，让动画看起来像苹果一样高级 */
+            transition: opacity 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+            transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        /* 当元素进入视口（添加 active 类后）的状态：完全可见且回到原位 */
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 可选：为了增加错落有致的动画感，可以延迟卡片内的子元素出现 */
+        .card .card-title, .card .card-price, .card .card-image {
+            transition: opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        .card.active .card-title, .card.active .card-price, .card.active .card-image {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+    </style>
+</head>
+<body>
+
+<!-- 顶部导航 -->
+<nav class="navbar">
+    <div class="nav-content">
+        <span></span>
+        <span>商店</span>
+        <span>Mac</span>
+        <span>iPad</span>
+        <span>iPhone</span>
+        <span>Watch</span>
+        <span>AirPods</span>
+        <span>家居</span>
+        <span>配件</span>
+        <span>技术支持</span>
+    </div>
+</nav>
+
+<main class="container">
+
+    <!-- 头部标题区 -->
+    <header class="header-section reveal">
+        <h1>商店</h1>
+        <div class="help-info">
+            <p>产品都称心，<br>体验更如意。</p>
+            <a href="#">联系 Specialist 专家 ></a>
+        </div>
+    </header>
+
+    <!-- 分类图标导航 -->
+    <div class="category-nav reveal">
+        <div class="category-item">
+            <div class="icon-placeholder">💻</div>
+            <span>Mac</span>
+        </div>
+        <div class="category-item">
+            <div class="icon-placeholder">📱</div>
+            <span>iPhone</span>
+        </div>
+        <div class="category-item">
+            <div class="icon-placeholder">⌚️</div>
+            <span>Watch</span>
+        </div>
+        <div class="category-item">
+            <div class="icon-placeholder">🎧</div>
+            <span>AirPods</span>
+        </div>
+        <div class="category-item">
+            <div class="icon-placeholder">🏠</div>
+            <span>家居</span>
+        </div>
+        <div class="category-item">
+            <div class="icon-placeholder">🔌</div>
+            <span>配件</span>
+        </div>
+    </div>
+
+    <!-- 最新产品区块 -->
+    <h2 class="section-title reveal">上新了，一睹为快。</h2>
+    <div class="grid">
+        <!-- 卡片 1 (加上 reveal 类) -->
+        <div class="card reveal">
+            <span class="tag-new">新品</span>
+            <h3 class="card-title">iPhone 18 Pro</h3>
+            <p class="card-price">RMB 8999 起</p>
+            <div class="card-image img-iphone">iPhone 图像</div>
+        </div>
+        <!-- 卡片 2 -->
+        <div class="card reveal">
+            <span class="tag-new">新品</span>
+            <h3 class="card-title">Apple Watch Series 12</h3>
+            <p class="card-price">RMB 2999 起</p>
+            <div class="card-image img-watch">Watch 图像</div>
+        </div>
+        <!-- 卡片 3 -->
+        <div class="card reveal">
+            <span class="tag-new">新品</span>
+            <h3 class="card-title">Mac mini</h3>
+            <p class="card-price">RMB 4999 起</p>
+            <div class="card-image img-mac">Mac 图像</div>
+        </div>
+        <!-- 卡片 4 -->
+        <div class="card reveal">
+            <span class="tag-new">新品</span>
+            <h3 class="card-title">AirPods Pro 3</h3>
+            <p class="card-price">RMB 1899 起</p>
+            <div class="card-image img-airpods">AirPods 图像</div>
+        </div>
+    </div>
+
+    <!-- 配件区块 -->
+    <h2 class="section-title reveal">配件。样样精选，绝配你心爱的产品。</h2>
+    <div class="grid">
+        <!-- 卡片 5 -->
+        <div class="card reveal">
+            <span class="tag-new">新品</span>
+            <h3 class="card-title">iPhone 18 Pro 专用 MagSafe 保护壳</h3>
+            <p class="card-price">RMB 449</p>
+            <div class="card-image">配件图像</div>
+        </div>
+        <!-- 卡片 6 -->
+        <div class="card reveal">
+            <span class="tag-new">新品</span>
+            <h3 class="card-title">42 毫米编织单圈表带</h3>
+            <p class="card-price">RMB 379</p>
+            <div class="card-image">表带图像</div>
+        </div>
+        <!-- 卡片 7 -->
+        <div class="card reveal">
+            <span class="tag-new">新品</span>
+            <h3 class="card-title">妙控键盘 - iPad Air</h3>
+            <p class="card-price">RMB 2399</p>
+            <div class="card-image">键盘图像</div>
+        </div>
+        <!-- 卡片 8 -->
+        <div class="card reveal">
+            <span class="tag-new">新品</span>
+            <h3 class="card-title">Apple Pencil (USB-C)</h3>
+            <p class="card-price">RMB 649</p>
+            <div class="card-image">触控笔图像</div>
+        </div>
+    </div>
+
+</main>
+
+<!-- 底部 -->
+<footer class="footer reveal">
+    <p>帮手在此，时时待命应你所需。</p>
+    <p style="margin-top: 10px; color: #555;">© 2024 仿 Apple Store 演示页面. 仅供学习交流使用。</p>
+</footer>
+
+<!-- =========================================
+     JavaScript 动态交互逻辑
+     ========================================= -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // 1. 选中所有带有 .reveal 类的元素
+        const revealElements = document.querySelectorAll('.reveal');
+
+        // 2. 配置 Intersection Observer (观察者)
+        // threshold: 0.15 表示当元素有 15% 出现在屏幕中时，就触发动画
+        const observerOptions = {
+            root: null, // 默认使用浏览器视口
+            rootMargin: '0px 0px -50px 0px', // 稍微提前触发（底部向内缩进50px）
+            threshold: 0.15
+        };
+
+        // 3. 创建观察者实例
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                // 如果元素进入视口 (isIntersecting 为 true)
+                if (entry.isIntersecting) {
+                    // 给元素添加 active 类，触发 CSS 过渡动画
+                    entry.target.classList.add('active');
+
+                    // 动画完成后停止观察该元素（避免来回滚动时反复触发，节省性能）
+                    // 如果你想让用户每次滚回来都有动画，把这行注释掉即可
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        // 4. 让观察者开始观察所有选中的元素
+        revealElements.forEach(element => {
+            observer.observe(element);
+        });
+    });
+</script>
+</body>
+</html>

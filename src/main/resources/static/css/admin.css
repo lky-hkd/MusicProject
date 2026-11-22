@@ -1,0 +1,120 @@
+/* ============ 后台布局 ============ */
+.admin-body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #071a21 0%, #0d2b34 100%);
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;
+}
+
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* 侧边栏 */
+.admin-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.35);
+  border-right: 1px solid var(--mc-border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+.admin-brand {
+  font-size: 18px;
+  font-weight: 700;
+  padding: 22px 20px;
+  background: linear-gradient(135deg, var(--mc-primary), var(--mc-primary-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  border-bottom: 1px solid var(--mc-border);
+}
+.admin-menu {
+  flex: 1;
+  padding: 12px 10px;
+  overflow-y: auto;
+}
+.admin-menu-item {
+  display: block;
+  padding: 12px 16px;
+  margin-bottom: 6px;
+  border-radius: 10px;
+  color: var(--mc-text-dim);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  user-select: none;
+}
+.admin-menu-item:hover { background: var(--mc-bg-hover); color: #fff; }
+.admin-menu-item.active {
+  background: linear-gradient(135deg, var(--mc-primary), var(--mc-primary-2));
+  color: #04222b;
+  font-weight: 600;
+}
+.admin-menu-group {
+  font-size: 11px;
+  color: rgba(255,255,255,0.35);
+  padding: 14px 16px 6px;
+  letter-spacing: 1px;
+}
+
+.admin-sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--mc-border);
+  font-size: 13px;
+}
+.admin-user-info { color: #fff; margin-bottom: 8px; word-break: break-all; }
+.admin-back { color: var(--mc-primary); text-decoration: none; font-size: 13px; }
+.admin-back:hover { text-decoration: underline; }
+
+/* 主区域 */
+.admin-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.admin-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 28px;
+  border-bottom: 1px solid var(--mc-border);
+  background: rgba(0,0,0,0.2);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(8px);
+}
+.admin-topbar h1 { font-size: 20px; margin: 0; }
+.admin-role-badge {
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: var(--mc-bg);
+  border: 1px solid var(--mc-border);
+}
+.admin-content { padding: 28px; flex: 1; }
+.admin-loading { color: var(--mc-text-dim); padding: 40px; text-align: center; }
+
+/* 响应式 */
+@media (max-width: 900px) {
+  .admin-layout { flex-direction: column; }
+  .admin-sidebar {
+    width: 100%;
+    height: auto;
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .admin-menu { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; }
+  .admin-menu-item { margin-bottom: 0; padding: 8px 14px; }
+  .admin-menu-group { display: none; }
+  .admin-sidebar-footer { border-top: none; padding: 10px 16px; }
+}

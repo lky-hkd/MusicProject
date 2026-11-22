@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>音乐智能搜索平台</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/css/style.css">
+
+  <!-- Three.js 和水面：defer 保证不阻塞 -->
+  <script src="/js/three.min.js" defer></script>
+  <script src="/js/core/water.js" defer></script>
+</head>
+<body>
+<!-- ========== 全局：水面背景 ========== -->
+<div id="canvas-container"></div>
+
+<!-- ========== 全局：音频（永远存在） ========== -->
+<audio id="globalAudio"></audio>
+
+<!-- ========== 页面视图：同一时间只显示一个 ========== -->
+<div class="page-root">
+
+  <!-- 首页 -->
+  <div class="view" id="view-home">
+    <div class="page-wrap">
+      <!-- 右上角用户区域 -->
+      <div class="user-header" id="userHeader">
+        <div class="user-logined" style="display:none;cursor:pointer;" onclick="location.hash='#/user'">
+          <img id="topAvatar" class="top-avatar">
+          <span id="topNickname"></span>
+          <span class="header-msg-entry" title="消息" onclick="event.stopPropagation();location.hash='#/messages'">💬<em class="header-msg-badge" id="chatBadge" style="display:none;">0</em></span>
+          <button id="logoutBtn">退出登录</button>
+        </div>
+        <div class="user-not-login" style="display:none;">
+          <div class="user-profile" role="button" tabindex="0" aria-label="登录" onclick="location.hash='#/login'">
+            <div class="user-profile-inner">
+              <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="m15.626 11.769a6 6 0 1 0 -7.252 0 9.008 9.008 0 0 0 -5.374 8.231 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 9.008 9.008 0 0 0 -5.374-8.231zm-7.626-4.769a4 4 0 1 1 4 4 4 4 0 0 1 -4-4zm10 14h-12a1 1 0 0 1 -1-1 7 7 0 0 1 14 0 1 1 0 0 1 -1 1z"></path>
+              </svg>
+              <p>登录</p>
+            </div>
+          </div>
+          <div class="user-profile" role="button" tabindex="0" aria-label="注册" onclick="location.hash='#/register'">
+            <div class="user-profile-inner">
+              <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="m15.626 11.769a6 6 0 1 0 -7.252 0 9.008 9.008 0 0 0 -5.374 8.231 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 9.008 9.008 0 0 0 -5.374-8.231zm-7.626-4.769a4 4 0 1 1 4 4 4 4 0 0 1 -4-4zm10 14h-12a1 1 0 0 1 -1-1 7 7 0 0 1 14 0 1 1 0 0 1 -1 1z"></path>
+              </svg>
+              <p>注册</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="brand-header">
+        <h1 class="brand-name">音乐海洋 🌊 Wave Music</h1>
+        <p class="brand-slogan">发现好音乐，每一刻都有声音陪伴</p>
+      </div>
+
+      <!-- 搜索区域 -->
+      <div class="search-panel">
+        <div class="search-glow">
+          <div class="sg-glow"></div>
+          <div class="sg-dark"></div>
+          <div class="sg-dark"></div>
+          <div class="sg-dark"></div>
+          <div class="sg-white"></div>
+          <div class="sg-border"></div>
+          <div class="sg-main">
+            <input id="search-input" class="sg-input" type="text" placeholder="输入歌曲名搜索">
+            <div class="sg-input-mask"></div>
+            <div class="sg-pink-mask"></div>
+            <div class="sg-filter-border"></div>
+            <div class="sg-filter-icon">
+              <svg preserveAspectRatio="none" height="27" width="27" viewBox="4.8 4.56 14.832 15.408" fill="none">
+                <path d="M8.16 6.65002H15.83C16.47 6.65002 16.99 7.17002 16.99 7.81002V9.09002C16.99 9.56002 16.7 10.14 16.41 10.43L13.91 12.64C13.56 12.93 13.33 13.51 13.33 13.98V16.48C13.33 16.83 13.1 17.29 12.81 17.47L12 17.98C11.24 18.45 10.2 17.92 10.2 16.99V13.91C10.2 13.5 9.97 12.98 9.73 12.69L7.52 10.36C7.23 10.08 7 9.55002 7 9.20002V7.87002C7 7.17002 7.52 6.65002 8.16 6.65002Z" stroke="#d6d6e6" stroke-width="1" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </div>
+            <div class="sg-search-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+                <circle stroke="#b6a9b7" r="8" cy="11" cx="11"></circle>
+                <line stroke="#837484" y2="16.65" y1="22" x2="16.65" x1="22"></line>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <button id="search-btn">搜索</button>
+      </div>
+
+      <!-- 搜索结果区域 -->
+      <div class="section-title" id="searchResultTitle" style="display:none;">🔍 搜索结果</div>
+      <div class="rank-list" id="searchResultWrap" style="display:none;"></div>
+      <div style="margin-bottom:20px;display:none;" id="backRankWrap">
+        <button id="backRankBtn">返回热门榜单</button>
+      </div>
+
+      <!-- 曲风标签 -->
+      <div class="tag-group">
+        <div class="tag-item active" data-type="">全部</div>
+        <div class="tag-item" data-type="流行">流行</div>
+        <div class="tag-item" data-type="国风">国风</div>
+        <div class="tag-item" data-type="说唱">说唱</div>
+        <div class="tag-item" data-type="摇滚">摇滚</div>
+        <div class="tag-item" data-type="纯音乐">纯音乐</div>
+      </div>
+
+      <!-- 曲风分类卡片 -->
+      <div class="section-title">🎵 曲风分类</div>
+      <div class="card-grid">
+        <div class="type-card" data-type="流行" style="--card-img:url('/img/liuxing.png')"><span class="type-card-text">流行</span></div>
+        <div class="type-card" data-type="国风" style="--card-img:url('/img/zhoujielun_fantexi.png')"><span class="type-card-text">国风</span></div>
+        <div class="type-card" data-type="说唱" style="--card-img:url('/img/shuochang.png')"><span class="type-card-text">说唱</span></div>
+        <div class="type-card" data-type="摇滚" style="--card-img:url('/img/yaokun.png')"><span class="type-card-text">摇滚</span></div>
+        <div class="type-card" data-type="纯音乐" style="--card-img:url('/img/chunyinyue.png')"><span class="type-card-text">纯音乐</span></div>
+      </div>
+
+      <!-- 热门排行榜 -->
+      <div class="section-title">🔥 热门排行榜</div>
+      <div class="rank-list" id="rankWrap">
+        <div>加载中...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 用户页 -->
+  <div class="view" id="view-user">
+    <div class="page-wrap">
+      <div class="back-home" onclick="location.hash='#/home'">← 返回首页</div>
+
+      <div class="user-card">
+        <img class="avatar" id="avatar">
+        <div class="user-info">
+          <h2 id="nickname">加载中...</h2>
+          <div class="desc" id="userDesc"></div>
+        </div>
+        <button type="button" class="profile-edit-btn" onclick="location.hash='#/profile-edit'">编辑资料</button>
+
+      </div>
+
+      <div class="card-group">
+        <div class="vip-card-parent" onclick="location.hash='#/collect'">
+          <div class="vip-card">
+            <div class="vip-card-glass"></div>
+            <div class="vip-card-content">
+              <span class="vip-card-title">我的收藏</span>
+              <span class="vip-card-num" id="collectCount">-</span>
+              <span class="vip-card-text">收藏的歌曲，随时收听</span>
+            </div>
+            <div class="vip-card-logo">
+              <span class="circle c1"></span>
+              <span class="circle c2"></span>
+              <span class="circle c3"></span>
+              <span class="circle c4"></span>
+              <span class="circle c5">♪</span>
+            </div>
+          </div>
+        </div>
+        <div class="vip-card-parent" onclick="location.hash='#/history'">
+          <div class="vip-card">
+            <div class="vip-card-glass"></div>
+            <div class="vip-card-content">
+              <span class="vip-card-title">播放历史</span>
+              <span class="vip-card-num" id="historyCount">-</span>
+              <span class="vip-card-text">最近听过的歌曲记录</span>
+            </div>
+            <div class="vip-card-logo">
+              <span class="circle c1"></span>
+              <span class="circle c2"></span>
+              <span class="circle c3"></span>
+              <span class="circle c4"></span>
+              <span class="circle c5">♪</span>
+            </div>
+          </div>
+        </div>
+        <div class="vip-card-parent" onclick="location.hash='#/coupon'">
+          <div class="vip-card">
+            <div class="vip-card-glass"></div>
+            <div class="vip-card-content">
+              <span class="vip-card-title">我的优惠券</span>
+              <span class="vip-card-num">🎫</span>
+              <span class="vip-card-text">查看可用、已用与过期券</span>
+            </div>
+            <div class="vip-card-logo">
+              <span class="circle c1"></span>
+              <span class="circle c2"></span>
+              <span class="circle c3"></span>
+              <span class="circle c4"></span>
+              <span class="circle c5">♪</span>
+            </div>
+          </div>
+        </div>
+        <div class="vip-card-parent" onclick="location.hash='#/address'">
+          <div class="vip-card">
+            <div class="vip-card-glass"></div>
+            <div class="vip-card-content">
+              <span class="vip-card-title">收货地址</span>
+              <span class="vip-card-num">📍</span>
+              <span class="vip-card-text">管理你的收货地址</span>
+            </div>
+            <div class="vip-card-logo">
+              <span class="circle c1"></span>
+              <span class="circle c2"></span>
+              <span class="circle c3"></span>
+              <span class="circle c4"></span>
+              <span class="circle c5">♪</span>
+            </div>
+          </div>
+        </div>
+        <div class="vip-card-parent" onclick="location.hash='#/my-orders'">
+          <div class="vip-card">
+            <div class="vip-card-glass"></div>
+            <div class="vip-card-content">
+              <span class="vip-card-title">我的订单</span>
+              <span class="vip-card-num">📦</span>
+              <span class="vip-card-text">查看所有订单</span>
+            </div>
+            <div class="vip-card-logo">
+              <span class="circle c1"></span>
+              <span class="circle c2"></span>
+              <span class="circle c3"></span>
+              <span class="circle c4"></span>
+              <span class="circle c5">♪</span>
+            </div>
+          </div>
+        </div>
+        <div class="vip-card-parent" onclick="location.hash='#/messages'">
+          <div class="vip-card">
+            <div class="vip-card-glass"></div>
+            <div class="vip-card-content">
+              <span class="vip-card-title">我的消息</span>
+              <span class="vip-card-num" id="msgCount">💬</span>
+              <span class="vip-card-text">与商家、客服和好友聊天</span>
+            </div>
+            <div class="vip-card-logo">
+              <span class="circle c1"></span>
+              <span class="circle c2"></span>
+              <span class="circle c3"></span>
+              <span class="circle c4"></span>
+              <span class="circle c5">♪</span>
+            </div>
+          </div>
+        </div>
+        <div class="vip-card-parent" onclick="location.hash='#/follow'">
+          <div class="vip-card">
+            <div class="vip-card-glass"></div>
+            <div class="vip-card-content">
+              <span class="vip-card-title">我的关注</span>
+              <span class="vip-card-num" id="followingCount">-</span>
+              <span class="vip-card-text" id="followSummary">粉丝 - 人 · 点击查看</span>
+            </div>
+            <div class="vip-card-logo">
+              <span class="circle c1"></span>
+              <span class="circle c2"></span>
+              <span class="circle c3"></span>
+              <span class="circle c4"></span>
+              <span class="circle c5">♪</span>
+            </div>
+          </div>
+        </div>
+        <div class="vip-card-parent" id="merchantApplyCard" style="display:none;" onclick="location.hash='#/merchant-apply'">
+          <div class="vip-card">
+            <div class="vip-card-glass"></div>
+            <div class="vip-card-content">
+              <span class="vip-card-title">申请开店</span>
+              <span class="vip-card-num">🏪</span>
+              <span class="vip-card-text">成为商家，售卖你的商品</span>
+            </div>
+            <div class="vip-card-logo">
+              <span class="circle c1"></span>
+              <span class="circle c2"></span>
+              <span class="circle c3"></span>
+              <span class="circle c4"></span>
+              <span class="circle c5">♪</span>
+            </div>
+          </div>
+        </div>
+        <div class="vip-card-parent" id="merchantCenterCard" style="display:none;" onclick="location.hash='#/merchant-center'">
+          <div class="vip-card">
+            <div class="vip-card-glass"></div>
+            <div class="vip-card-content">
+              <span class="vip-card-title">商家中心</span>
+              <span class="vip-card-num">💼</span>
+              <span class="vip-card-text">管理店铺、商品与订单</span>
+            </div>
+            <div class="vip-card-logo">
+              <span class="circle c1"></span>
+              <span class="circle c2"></span>
+              <span class="circle c3"></span>
+              <span class="circle c4"></span>
+              <span class="circle c5">♪</span>
+            </div>
+          </div>
+        </div>
+        <div class="vip-card-parent" id="adminEntryCard" style="display:none;" onclick="window.open('/admin.html','_blank')">
+          <div class="vip-card">
+            <div class="vip-card-glass"></div>
+            <div class="vip-card-content">
+              <span class="vip-card-title">管理后台</span>
+              <span class="vip-card-num">⚙️</span>
+              <span class="vip-card-text">平台管理与运营</span>
+            </div>
+            <div class="vip-card-logo">
+              <span class="circle c1"></span>
+              <span class="circle c2"></span>
+              <span class="circle c3"></span>
+              <span class="circle c4"></span>
+              <span class="circle c5">♪</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="view" id="view-merchant-apply">
+    <div class="page-wrap">
+      <div class="back-home" onclick="location.hash='#/user'">← 返回个人主页</div>
+      <h2>申请开店</h2>
+      <div class="apply-form">
+        <div class="form-item">
+          <label>店铺名称 *</label>
+          <input id="applyShopName" type="text" placeholder="请输入店铺名称（最多30字）" maxlength="30">
+        </div>
+        <div class="form-item">
+          <label>店铺Logo URL</label>
+          <input id="applyLogo" type="text" placeholder="图片地址（可选）">
+        </div>
+        <div class="form-item">
+          <label>店铺简介</label>
+          <textarea id="applyDesc" placeholder="介绍一下你的店铺（最多200字）" maxlength="200"></textarea>
+        </div>
+        <div class="form-item">
+          <label>联系电话</label>
+          <input id="applyPhone" type="text" placeholder="联系电话（可选）">
+        </div>
+        <button class="submit-btn" id="applySubmitBtn">提交申请</button>
+        <div class="tip-text" id="applyTip"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="view" id="view-merchant-center">
+    <div class="page-wrap">
+      <div class="back-home" onclick="location.hash='#/user'">← 返回个人主页</div>
+      <h2>商家中心 - <span id="mcShopName"></span></h2>
+
+      <div class="mc-tabs">
+        <div class="mc-tab active" data-tab="dashboard">看板</div>
+        <div class="mc-tab" data-tab="products">商品</div>
+        <div class="mc-tab" data-tab="orders">订单</div>
+        <div class="mc-tab" data-tab="refunds">退款</div>
+        <div class="mc-tab" data-tab="reviews">评价</div>
+        <div class="mc-tab" data-tab="shop">店铺</div>
+      </div>
+
+      <div class="mc-panel" id="mc-dashboard"></div>
+      <div class="mc-panel" id="mc-products" style="display:none;"></div>
+      <div class="mc-panel" id="mc-orders" style="display:none;"></div>
+      <div class="mc-panel" id="mc-refunds" style="display:none;"></div>
+      <div class="mc-panel" id="mc-reviews" style="display:none;"></div>
+      <div class="mc-panel" id="mc-shop" style="display:none;"></div>
+    </div>
+    <div class="mc-modal" id="mcModal" style="display:none;">
+      <div class="mc-modal-content">
+        <div class="mc-modal-header"><span id="mcModalTitle"></span><span class="mc-modal-close" id="mcModalClose">×</span></div>
+        <div class="mc-modal-body" id="mcModalBody"></div>
+        <div class="mc-modal-footer" id="mcModalFooter"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 收藏页 -->
+  <div class="view" id="view-collect">
+    <div class="page-wrap">
+      <div class="back-user" onclick="location.hash='#/user'">← 返回个人主页</div>
+      <h2>我的收藏</h2>
+      <div id="collectList"></div>
+    </div>
+  </div>
+
+  <!-- 历史页 -->
+  <div class="view" id="view-history">
+    <div class="page-wrap">
+      <div class="back-user" onclick="location.hash='#/user'">← 返回个人主页</div>
+      <h2>播放历史</h2>
+      <div class="clear-all-box">
+        <button class="clear-history-btn" onclick="clearAllHistory()">清空全部历史</button>
+      </div>
+      <div id="historyList"></div>
+    </div>
+  </div>
+
+  <!-- 登录页 -->
+  <div class="view" id="view-login">
+    <div class="login-wrapper">
+      <div class="login-card">
+        <div class="glow-blob blob-1"></div>
+        <div class="glow-blob blob-2"></div>
+        <div class="dark-overlay"></div>
+
+        <div class="view-container">
+          <div class="lc-header">
+            <div class="lc-dot"></div>
+            <div class="lc-title">欢迎回来</div>
+            <p class="lc-subtitle">登录音乐海洋，继续你的音乐之旅</p>
+          </div>
+
+          <div class="lc-tabs">
+            <button type="button" class="lc-tab active" data-mode="pwd">密码登录</button>
+            <button type="button" class="lc-tab" data-mode="sms">短信登录</button>
+          </div>
+
+          <!-- 密码登录 -->
+          <div class="form-view" id="pwdView">
+            <div class="lc-group">
+              <input id="loginPhone" class="lc-input" type="tel" maxlength="11" placeholder="请输入手机号" autocomplete="tel">
+            </div>
+            <div class="lc-group">
+              <input id="loginPassword" class="lc-input" type="password" placeholder="请输入密码" autocomplete="current-password">
+            </div>
+            <div class="lc-forgot">
+              <span class="lc-link" data-mode="reset">忘记密码？</span>
+            </div>
+            <button type="button" class="lc-btn" id="loginSubmit">登 录</button>
+            <div class="lc-prompt">
+              还没有账号？<span class="lc-link" onclick="location.hash='#/register'">立即注册</span>
+            </div>
+          </div>
+
+          <!-- 短信登录 -->
+          <div class="form-view" id="smsView" style="display:none;">
+            <div class="lc-group">
+              <input id="smsPhone" class="lc-input" type="tel" maxlength="11" placeholder="请输入手机号" autocomplete="tel">
+            </div>
+            <div class="lc-group lc-code-group">
+              <input id="smsCode" class="lc-input" type="text" maxlength="6" placeholder="6 位验证码">
+              <button type="button" class="lc-code-btn" id="sendCodeBtn" data-phone="smsPhone">获取验证码</button>
+            </div>
+            <button type="button" class="lc-btn" id="smsLoginSubmit">登录 / 注册</button>
+            <div class="lc-prompt">未注册的手机号将自动创建账号</div>
+          </div>
+
+          <!-- 忘记密码 -->
+          <div class="form-view" id="resetView" style="display:none;">
+            <div class="lc-group">
+              <input id="resetPhone" class="lc-input" type="tel" maxlength="11" placeholder="请输入注册手机号" autocomplete="tel">
+            </div>
+            <div class="lc-group lc-code-group">
+              <input id="resetCode" class="lc-input" type="text" maxlength="6" placeholder="6 位验证码">
+              <button type="button" class="lc-code-btn" id="resetSendBtn" data-phone="resetPhone">获取验证码</button>
+            </div>
+            <div class="lc-group">
+              <input id="resetPassword" class="lc-input" type="password" placeholder="设置新密码（至少 6 位）" autocomplete="new-password">
+            </div>
+            <div class="lc-group">
+              <input id="resetConfirm" class="lc-input" type="password" placeholder="确认新密码" autocomplete="new-password">
+            </div>
+            <button type="button" class="lc-btn" id="resetSubmit">确认修改</button>
+            <div class="lc-prompt">
+              <span class="lc-link" data-mode="pwd">返回登录</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 注册页 -->
+  <div class="view" id="view-register">
+    <div class="login-wrapper">
+      <div class="login-card">
+        <div class="glow-blob blob-1"></div>
+        <div class="glow-blob blob-2"></div>
+        <div class="dark-overlay"></div>
+
+        <div class="view-container">
+          <div class="lc-header">
+            <div class="lc-dot"></div>
+            <div class="lc-title">创建账号</div>
+            <p class="lc-subtitle">注册音乐海洋，开启你的音乐之旅</p>
+          </div>
+
+          <div class="form-view">
+            <div class="lc-group">
+              <input id="reg-phone" class="lc-input" type="tel" maxlength="11" placeholder="请输入手机号" autocomplete="tel">
+            </div>
+            <div class="lc-group">
+              <input id="reg-password" class="lc-input" type="password" placeholder="请输入密码（至少 6 位）" autocomplete="new-password">
+            </div>
+            <div class="lc-group">
+              <input id="reg-confirmPwd" class="lc-input" type="password" placeholder="请再次输入密码" autocomplete="new-password">
+            </div>
+            <button type="button" class="lc-btn" id="registerSubmit">注 册</button>
+            <div class="lc-prompt">
+              已有账号？<span class="lc-link" onclick="location.hash='#/login'">前往登录</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 播放页 -->
+  <div class="view" id="view-player">
+    <div class="player-page">
+      <div class="pp-back" onclick="history.back()">← 返回</div>
+
+      <div class="music-player">
+        <div class="mp-left">
+          <img class="mp-cover" id="mpCover" src="" alt="封面">
+          <div class="mp-info">
+            <div class="mp-song-name" id="mpSongName">歌名</div>
+            <div class="mp-singer" id="mpSinger">歌手</div>
+            <div class="like-button" id="collectBtn">
+              <input class="on" id="collectHeart" type="checkbox">
+              <label class="like" for="collectHeart">
+                <svg class="like-icon" fill-rule="nonzero" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="m11.645 20.91-.007-.003-.022-.012a15.247 15.247 0 0 1-.383-.218 25.18 25.18 0 0 1-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0 1 12 5.052 5.5 5.5 0 0 1 16.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 0 1-4.244 3.17 15.247 15.247 0 0 1-.383.219l-.022.012-.007.004-.003.001a.752.752 0 0 1-.704 0l-.003-.001Z"></path>
+                </svg>
+                <span class="like-text">收藏</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="mp-right">
+          <div class="mp-lyric" id="lyricWrap">
+            <div class="lyric-line">暂无歌词</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mp-controls">
+        <div class="mp-progress-wrap">
+          <span class="mp-time" id="currentTime">00:00</span>
+          <input type="range" class="mp-progress" id="progressBar" min="0" value="0">
+          <span class="mp-time" id="totalTime">00:00</span>
+        </div>
+        <div class="mp-btns">
+          <button class="mp-btn" id="prevBtn">⏮</button>
+          <div class="play-switch" id="playBtn" role="button" tabindex="0">
+            <span class="slider">
+              <span class="title switch-title">播放</span>
+              <span class="ball"><span class="icon">▶</span></span>
+            </span>
+          </div>
+          <button class="mp-btn" id="nextBtn">⏭</button>
+          <div class="mp-spacer"></div>
+          <button class="mp-btn small" id="modeBtn" title="播放模式">🔁</button>
+          <button class="mp-btn small" id="volumeIcon" title="音量">🔊</button>
+          <input type="range" class="mp-volume" id="volumeSlider" min="0" max="1" step="0.01" value="0.7">
+          <button class="mp-btn small" id="playlistBtn" title="播放列表">☰</button>
+        </div>
+        <div class="mp-mode-menu" id="modeMenu" style="display:none;">
+          <div class="mode-item" data-mode="0">🔁 列表循环</div>
+          <div class="mode-item" data-mode="1">🔂 单曲循环</div>
+          <div class="mode-item" data-mode="2">🎲 随机播放</div>
+        </div>
+      </div>
+
+      <div class="playlist-panel" id="playlistPanel">
+        <div class="playlist-header">
+          <h3>播放列表</h3>
+          <span class="playlist-count" id="playlistCount">0 首</span>
+          <div class="playlist-close" id="playlistClose">×</div>
+        </div>
+        <div class="playlist-body" id="playlistBody"></div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="view" id="view-shop">
+    <div class="shop-container">
+
+      <!-- 顶部：返回 + 购物车 -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <div class="back-home" onclick="location.hash='#/home'" style="margin:0;">← 返回首页</div>
+        <div class="cart-entry" onclick="location.hash='#/cart'" style="position:static;">
+          🛒
+          <span class="cart-badge" id="cartBadge">0</span>
+        </div>
+      </div>
+      <!-- 搜索框（置顶） -->
+      <div class="shop-search-box reveal">
+        <div class="search-glow">
+          <div class="sg-glow"></div>
+          <div class="sg-dark"></div>
+          <div class="sg-dark"></div>
+          <div class="sg-dark"></div>
+          <div class="sg-white"></div>
+          <div class="sg-border"></div>
+          <div class="sg-main">
+            <input id="shop-search-input" class="sg-input" type="text" placeholder="搜索商品名称">
+            <div class="sg-input-mask"></div>
+            <div class="sg-pink-mask"></div>
+            <div class="sg-filter-border"></div>
+            <div class="sg-filter-icon">
+              <svg preserveAspectRatio="none" height="27" width="27" viewBox="4.8 4.56 14.832 15.408" fill="none">
+                <path d="M8.16 6.65002H15.83C16.47 6.65002 16.99 7.17002 16.99 7.81002V9.09002C16.99 9.56002 16.7 10.14 16.41 10.43L13.91 12.64C13.56 12.93 13.33 13.51 13.33 13.98V16.48C13.33 16.83 13.1 17.29 12.81 17.47L12 17.98C11.24 18.45 10.2 17.92 10.2 16.99V13.91C10.2 13.5 9.97 12.98 9.73 12.69L7.52 10.36C7.23 10.08 7 9.55002 7 9.20002V7.87002C7 7.17002 7.52 6.65002 8.16 6.65002Z" stroke="#d6d6e6" stroke-width="1" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </div>
+            <div class="sg-search-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+                <circle stroke="#b6a9b7" r="8" cy="11" cx="11"></circle>
+                <line stroke="#837484" y2="16.65" y1="22" x2="16.65" x1="22"></line>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <button id="shop-search-btn">搜索</button>
+      </div>
+
+      <!-- 头部 -->
+      <header class="shop-header-section reveal">
+        <h1>音乐商城</h1>
+        <div class="help-info">
+          <p>专辑 · 周边 · 会员<br>应有尽有</p>
+        </div>
+      </header>
+
+      <!-- 优惠券轮播 + 活动中心入口 -->
+      <section class="coupon-center reveal" id="couponCenter">
+        <div class="coupon-center-head">
+          <h2>🎫 优惠券活动</h2>
+          <div class="coupon-head-actions">
+            <span class="coupon-center-tip" id="couponCenterTip">登录后即可领取</span>
+            <a class="coupon-entry-link" href="#/activity">活动中心 ›</a>
+          </div>
+        </div>
+        <div class="coupon-carousel">
+          <button class="coupon-arrow coupon-prev" id="couponPrev" aria-label="上一张">‹</button>
+          <div class="coupon-viewport" id="couponViewport">
+            <div class="coupon-track" id="couponTrack">
+              <div class="empty-tip">加载中...</div>
+            </div>
+          </div>
+          <button class="coupon-arrow coupon-next" id="couponNext" aria-label="下一张">›</button>
+        </div>
+        <div class="coupon-dots" id="couponDots"></div>
+      </section>
+
+      <!-- 分类图标导航（动态渲染） -->
+      <div class="shop-category-nav reveal" id="shopCategoryNav">
+        <!-- JS 渲染 -->
+      </div>
+
+      <!-- 商品区块（动态渲染） -->
+      <h2 class="shop-section-title reveal">精选商品</h2>
+      <div class="shop-grid reveal" id="productGrid">
+        <div class="empty-tip">加载中...</div>
+      </div>
+
+      <!-- 分页 -->
+      <div class="shop-pagination" id="shopPagination"></div>
+    </div>
+  </div>
+
+  <!-- 商品详情 -->
+  <div class="view" id="view-product">
+    <div class="page-wrap">
+      <div class="back-home" onclick="history.back()">← 返回商城</div>
+      <div id="productDetail">
+        <div class="empty-tip">加载中...</div>
+      </div>
+    </div>
+  </div>
+
+  <!--购物车页面-->
+  <div class="view" id="view-cart">
+    <div class="page-wrap">
+      <div class="back-home" onclick="location.hash='#/shop'">← 返回商城</div>
+      <h2>我的购物车</h2>
+
+      <div id="cartList">
+        <div class="empty-tip">加载中...</div>
+      </div>
+
+      <!-- 底部结算栏 -->
+      <div class="cart-footer" id="cartFooter" style="display: none;">
+        <label class="cart-select-all">
+          <input type="checkbox" id="cartSelectAll"> 全选
+        </label>
+        <button class="cart-remove-selected" id="cartRemoveSelected">删除选中</button>
+        <div class="cart-total">
+          合计：<span id="cartTotalPrice">¥0.00</span>
+        </div>
+        <button class="cart-checkout-btn" id="cartCheckoutBtn">去结算</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 收货地址 -->
+  <div class="view" id="view-address">
+    <div class="page-wrap">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <div class="back-user" onclick="location.hash='#/user'" style="margin:0;">← 返回个人主页</div>
+        <button id="addressAddBtn" class="addr-add-btn">+ 新增地址</button>
+      </div>
+      <h2>我的收货地址</h2>
+
+      <div id="addressList">
+        <div class="empty-tip">加载中...</div>
+      </div>
+
+      <!-- 弹窗 -->
+      <div class="addr-modal" id="addressModal" style="display:none;">
+        <div class="addr-modal-content">
+          <div class="addr-modal-header">
+            <span id="addressModalTitle">新增地址</span>
+            <span class="addr-modal-close" id="addressModalClose">×</span>
+          </div>
+          <div class="addr-modal-body">
+            <div class="form-item">
+              <label>收件人</label>
+              <input id="addrReceiver" type="text" placeholder="请输入收件人姓名">
+            </div>
+            <div class="form-item">
+              <label>手机号</label>
+              <input id="addrPhone" type="text" placeholder="请输入手机号" maxlength="11">
+            </div>
+            <div class="form-row">
+              <div class="form-item" style="flex:1;">
+                <label>省</label>
+                <input id="addrProvince" type="text" placeholder="省">
+              </div>
+              <div class="form-item" style="flex:1;">
+                <label>市</label>
+                <input id="addrCity" type="text" placeholder="市">
+              </div>
+              <div class="form-item" style="flex:1;">
+                <label>区</label>
+                <input id="addrDistrict" type="text" placeholder="区/县">
+              </div>
+            </div>
+            <div class="form-item">
+              <label>详细地址</label>
+              <input id="addrDetail" type="text" placeholder="街道、门牌号等">
+            </div>
+            <div class="form-item">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input type="checkbox" id="addrIsDefault" style="width:auto;margin:0;">
+                <span>设为默认地址</span>
+              </label>
+            </div>
+          </div>
+          <div class="addr-modal-footer">
+            <button class="addr-btn" id="addressModalCancel">取消</button>
+            <button class="addr-btn primary" id="addressModalSave">保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- 活动中心 -->
+  <div class="view" id="view-activity">
+    <div class="page-wrap">
+      <div class="back-home" onclick="location.hash='#/shop'">← 返回商城</div>
+      <header class="activity-header">
+        <h2>🎫 活动中心</h2>
+        <p class="activity-sub" id="activityTip">登录后即可领取</p>
+      </header>
+      <div class="activity-list" id="activityList">
+        <div class="empty-tip">加载中...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 我的优惠券 -->
+  <div class="view" id="view-coupon">
+    <div class="page-wrap">
+      <div class="back-user" onclick="location.hash='#/user'">← 返回个人主页</div>
+      <h2>我的优惠券</h2>
+      <div class="my-coupon-tabs" id="myCouponTabs">
+        <div class="my-coupon-tab active" data-status="0">未使用</div>
+        <div class="my-coupon-tab" data-status="1">已使用</div>
+        <div class="my-coupon-tab" data-status="2">已过期</div>
+      </div>
+      <div id="myCouponList">
+        <div class="empty-tip">加载中...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 订单确认页 -->
+  <div class="view" id="view-order-confirm">
+    <div class="page-wrap">
+      <div class="back-home" onclick="history.back()">← 返回</div>
+      <h2>确认订单</h2>
+
+      <!-- 地址选择区域 -->
+      <div class="order-address-section" id="orderAddressSection">
+        <div class="order-address-title">收货地址</div>
+        <div id="orderAddressList">
+          <div class="empty-tip">加载中...</div>
+        </div>
+      </div>
+
+      <!-- 商品清单 -->
+      <div class="order-goods-section">
+        <div class="order-goods-title">商品清单</div>
+        <div id="orderGoodsList"></div>
+      </div>
+
+      <!-- 优惠券 -->
+      <div class="order-coupon-section" id="orderCouponSection">
+        <div class="order-goods-title">优惠券</div>
+        <div id="orderCouponList">
+          <div class="empty-tip">加载中...</div>
+        </div>
+      </div>
+
+      <!-- 底部结算栏 -->
+      <div class="order-submit-bar">
+        <div class="order-total">
+          <span class="order-discount-line" id="orderDiscountLine" style="display:none;">优惠：-¥<span id="orderDiscountAmount">0.00</span></span>
+          实付金额：<span id="orderTotalAmount">¥0.00</span>
+        </div>
+        <button class="order-submit-btn" id="orderSubmitBtn">提交订单</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 支付页 -->
+  <div class="view" id="view-order-pay">
+    <div class="page-wrap">
+      <div class="back-home" onclick="location.hash='#/my-orders'">← 返回订单列表</div>
+      <div class="pay-container">
+        <div class="pay-icon">💳</div>
+        <h2 class="pay-title">订单提交成功，请支付</h2>
+        <div class="pay-amount">
+          <span class="pay-amount-label">需支付：</span>
+          <span class="pay-amount-value" id="payAmount">¥0.00</span>
+        </div>
+        <div class="pay-order-no">
+          订单号：<span id="payOrderNo">-</span>
+        </div>
+        <div class="pay-actions">
+          <button class="pay-btn mock" id="payAlipayBtn">支付宝支付</button>
+<!--          <button class="pay-btn mock" id="payMockBtn">模拟支付（点我直接成功）</button>-->
+          <button class="pay-btn cancel" id="payCancelBtn">取消订单</button>
+        </div>
+        <div class="pay-tip">提示：15 分钟内未支付，订单将自动取消</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 我的订单列表 -->
+  <div class="view" id="view-my-orders">
+    <div class="page-wrap">
+      <div class="back-user" onclick="location.hash='#/user'">← 返回个人主页</div>
+      <h2>我的订单</h2>
+      <div id="myOrderList">
+        <div class="empty-tip">加载中...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 订单详情 -->
+  <div class="view" id="view-order-detail">
+    <div class="page-wrap">
+      <div class="back-home" onclick="location.hash='#/my-orders'">← 返回订单列表</div>
+      <h2>订单详情</h2>
+      <div id="orderDetailContent">
+        <div class="empty-tip">加载中...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 消息中心 ========== -->
+  <div class="view" id="view-messages">
+    <div class="page-wrap">
+      <div class="back-home" onclick="location.hash='#/home'">← 返回首页</div>
+      <div class="msg-page-head">
+        <h2 class="msg-page-title">消息中心</h2>
+        <button class="btn-secondary" id="serviceChatBtn">联系平台客服</button>
+      </div>
+      <div class="msg-search">
+        <input type="text" id="chatUserSearch" placeholder="输入昵称 / 用户名，发起聊天">
+        <button type="button" class="space-btn" id="chatUserSearchBtn">
+          <strong>搜索</strong>
+          <div class="space-stars"><span class="space-stars-dots"></span></div>
+          <div class="space-glow">
+            <div class="circle"></div>
+            <div class="circle"></div>
+          </div>
+        </button>
+      </div>
+      <div id="chatSearchResult" class="chat-search-result"></div>
+      <div id="conversationList" class="conversation-list">
+        <div class="empty-tip">加载中...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 关注 / 粉丝 ========== -->
+  <div class="view" id="view-follow">
+    <div class="page-wrap">
+      <div class="back-home" onclick="location.hash='#/user'">← 我的</div>
+      <div class="msg-page-head">
+        <h2 class="msg-page-title">我的关注</h2>
+      </div>
+      <div class="follow-tabs">
+        <button class="follow-tab active" data-tab="following">关注 <em id="followingTabCount">0</em></button>
+        <button class="follow-tab" data-tab="followers">粉丝 <em id="followersTabCount">0</em></button>
+      </div>
+      <div id="followList" class="follow-list">
+        <div class="empty-tip">加载中...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 编辑资料 ========== -->
+  <div class="view" id="view-profile-edit">
+    <div class="page-wrap">
+      <div class="back-home" onclick="location.hash='#/user'">← 返回个人主页</div>
+      <h2>编辑资料</h2>
+
+      <div class="pe-card">
+        <div class="pe-avatar-row">
+          <img id="peAvatar" class="pe-avatar" src="/img/touxiang.jpg" alt="">
+          <div>
+            <button type="button" class="pe-avatar-btn" id="peAvatarBtn">更换头像</button>
+            <input type="file" id="peAvatarInput" accept="image/*" style="display:none">
+            <div class="pe-tip" id="peAvatarTip">支持 jpg / png / gif / webp，最大 5MB，上传后自动保存</div>
+          </div>
+        </div>
+
+        <div class="pe-field">
+          <label>昵称</label>
+          <input type="text" id="peNickname" maxlength="20" placeholder="2-20 个字符">
+        </div>
+        <div class="pe-field">
+          <label>性别</label>
+          <div class="pe-gender">
+            <label><input type="radio" name="peGender" value="0"> 保密</label>
+            <label><input type="radio" name="peGender" value="1"> 男</label>
+            <label><input type="radio" name="peGender" value="2"> 女</label>
+          </div>
+        </div>
+        <div class="pe-field">
+          <label>生日</label>
+          <input type="date" id="peBirthday">
+        </div>
+        <div class="pe-field">
+          <label>个性签名</label>
+          <textarea id="peSignature" maxlength="100" placeholder="介绍一下自己吧（最多100字）"></textarea>
+        </div>
+        <div class="pe-field">
+          <label>手机号</label>
+          <input type="text" id="pePhone" readonly>
+        </div>
+
+        <div class="pe-actions">
+          <button type="button" class="pe-save-btn" id="peSaveBtn">保存资料</button>
+        </div>
+      </div>
+
+      <div class="pe-card">
+        <h3 class="pe-card-title">账号安全</h3>
+        <div id="pePasswordArea" class="pe-security">
+          <div class="pe-tip">加载中...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 签到中心 ========== -->
+  <div class="view" id="view-sign">
+    <div class="page-wrap">
+      <div class="back-user" onclick="location.hash='#/user'">← 返回个人主页</div>
+      <h2 class="sign-title">签到中心</h2>
+
+      <div class="sign-card">
+        <div class="sign-stats">
+          <div class="sign-stat">
+            <b id="signContinuous">0</b>
+            <span>连续签到</span>
+          </div>
+          <div class="sign-stat">
+            <b id="signMonth">0</b>
+            <span>本月签到</span>
+          </div>
+          <div class="sign-stat">
+            <b id="signTotal">0</b>
+            <span>累计签到</span>
+          </div>
+        </div>
+
+        <button class="sign-btn" id="signBtn" type="button" aria-label="签到">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="8 8 36 36" width="36px" height="36px" aria-hidden="true">
+            <path fill="#e53935" d="M38.67,42H11.52C11.27,40.62,11,38.57,11,36c0-5,0-11,0-11s1.44-7.39,3.22-9.59 c1.67-2.06,2.76-3.48,6.78-4.41c3-0.7,7.13-0.23,9,1c2.15,1.42,3.37,6.67,3.81,11.29c1.49-0.3,5.21,0.2,5.5,1.28 C40.89,30.29,39.48,38.31,38.67,42z"></path>
+            <path fill="#b71c1c" d="M39.02,42H11.99c-0.22-2.67-0.48-7.05-0.49-12.72c0.83,4.18,1.63,9.59,6.98,9.79 c3.48,0.12,8.27,0.55,9.83-2.45c1.57-3,3.72-8.95,3.51-15.62c-0.19-5.84-1.75-8.2-2.13-8.7c0.59,0.66,3.74,4.49,4.01,11.7 c0.03,0.83,0.06,1.72,0.08,2.66c4.21-0.15,5.93,1.5,6.07,2.35C40.68,33.85,39.8,38.9,39.02,42z"></path>
+            <path fill="#212121" d="M35,27.17c0,3.67-0.28,11.2-0.42,14.83h-2C32.72,38.42,33,30.83,33,27.17 c0-5.54-1.46-12.65-3.55-14.02c-1.65-1.08-5.49-1.48-8.23-0.85c-3.62,0.83-4.57,1.99-6.14,3.92L15,16.32 c-1.31,1.6-2.59,6.92-3,8.96v10.8c0,2.58,0.28,4.61,0.54,5.92H10.5c-0.25-1.41-0.5-3.42-0.5-5.92l0.02-11.09 c0.15-0.77,1.55-7.63,3.43-9.94l0.08-0.09c1.65-2.03,2.96-3.63,7.25-4.61c3.28-0.76,7.67-0.25,9.77,1.13 C33.79,13.6,35,22.23,35,27.17z"></path>
+            <path fill="#01579b" d="M17.165,17.283c5.217-0.055,9.391,0.283,9,6.011c-0.391,5.728-8.478,5.533-9.391,5.337 c-0.913-0.196-7.826-0.043-7.696-5.337C9.209,18,13.645,17.32,17.165,17.283z"></path>
+            <path fill="#212121" d="M40.739,37.38c-0.28,1.99-0.69,3.53-1.22,4.62h-2.43c0.25-0.19,1.13-1.11,1.67-4.9 c0.57-4-0.23-11.79-0.93-12.78c-0.4-0.4-2.63-0.8-4.37-0.89l0.1-1.99c1.04,0.05,4.53,0.31,5.71,1.49 C40.689,24.36,41.289,33.53,40.739,37.38z"></path>
+            <path fill="#81d4fa" d="M10.154,20.201c0.261,2.059-0.196,3.351,2.543,3.546s8.076,1.022,9.402-0.554 c1.326-1.576,1.75-4.365-0.891-5.267C19.336,17.287,12.959,16.251,10.154,20.201z"></path>
+            <path fill="#212121" d="M17.615,29.677c-0.502,0-0.873-0.03-1.052-0.069c-0.086-0.019-0.236-0.035-0.434-0.06 c-5.344-0.679-8.053-2.784-8.052-6.255c0.001-2.698,1.17-7.238,8.986-7.32l0.181-0.002c3.444-0.038,6.414-0.068,8.272,1.818 c1.173,1.191,1.712,3,1.647,5.53c-0.044,1.688-0.785,3.147-2.144,4.217C22.785,29.296,19.388,29.677,17.615,29.677z M17.086,17.973 c-7.006,0.074-7.008,4.023-7.008,5.321c-0.001,3.109,3.598,3.926,6.305,4.27c0.273,0.035,0.48,0.063,0.601,0.089 c0.563,0.101,4.68,0.035,6.855-1.732c0.865-0.702,1.299-1.57,1.326-2.653c0.051-1.958-0.301-3.291-1.073-4.075 c-1.262-1.281-3.834-1.255-6.825-1.222L17.086,17.973z"></path>
+            <path fill="#e1f5fe" d="M15.078,19.043c1.957-0.326,5.122-0.529,4.435,1.304c-0.489,1.304-7.185,2.185-7.185,0.652 C12.328,19.467,15.078,19.043,15.078,19.043z"></path>
+          </svg>
+          <span class="now">签到</span>
+          <span class="play">签到</span>
+        </button>
+
+        <p class="sign-tip" id="signTip">加载中...</p>
+
+        <div class="sign-progress">
+          <div class="sign-progress-bar"><i id="signProgressFill"></i></div>
+          <div class="sign-progress-text" id="signProgressText">每满 30 天可兑换 7 天 VIP</div>
+        </div>
+
+        <button class="sign-redeem-btn" id="signRedeemBtn" type="button" style="display:none;">兑换 VIP</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 商家店铺 ========== -->
+  <div class="view" id="view-merchant-shop">
+    <div class="page-wrap">
+      <div class="back-home" onclick="history.back()">← 返回</div>
+      <div id="merchantShopHeader" class="ms-header"></div>
+      <div class="shop-grid" id="merchantShopGrid"></div>
+      <div class="pd-review-more">
+        <button type="button" id="merchantShopMore" style="display:none;">加载更多商品</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 广场 ========== -->
+  <div class="view" id="view-feed">
+    <div class="page-wrap">
+      <div class="back-home" onclick="location.hash='#/home'">← 首页</div>
+      <div class="msg-page-head">
+        <h2 class="msg-page-title">广场</h2>
+      </div>
+
+      <div class="post-publish" id="postPublishBox">
+        <textarea id="postContent" maxlength="1000" placeholder="分享你此刻的想法..."></textarea>
+        <div class="post-publish-imgs" id="postImagePreview"></div>
+        <div class="post-publish-bar">
+          <button class="post-img-btn" id="postImageBtn" type="button">🖼 图片</button>
+          <input type="file" id="postImageInput" accept="image/*" multiple style="display:none">
+          <span class="post-publish-tip" id="postPublishTip">最多 9 张图片</span>
+          <button type="button" class="send-plane-btn" id="postPublishBtn">
+            <div class="spb-svg-wrapper-1">
+              <div class="spb-svg-wrapper">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20">
+                  <path fill="none" d="M0 0h24v24H0z"></path>
+                  <path fill="currentColor" d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z"></path>
+                </svg>
+              </div>
+            </div>
+            <span>发布</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="feed-tabs">
+        <button class="feed-tab active" data-tab="square">广场</button>
+        <button class="feed-tab" data-tab="following">关注</button>
+      </div>
+
+      <div id="postList" class="post-list">
+        <div class="empty-tip">加载中...</div>
+      </div>
+      <div class="feed-more">
+        <button class="feed-more-btn" id="postLoadMore" style="display:none;">加载更多</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 动态详情 ========== -->
+  <div class="view" id="view-post">
+    <div class="page-wrap">
+      <div class="back-home" onclick="location.hash='#/feed'">← 广场</div>
+      <div id="postDetail" class="post-list"></div>
+
+      <div class="comment-box">
+        <textarea id="commentInput" maxlength="500" placeholder="说点什么..."></textarea>
+        <button class="send-fx" id="commentSubmitBtn" type="button" aria-label="发送评论">
+          <span class="send-fx-outline"></span>
+          <span class="send-fx-state send-fx-default">
+            <span class="send-fx-icon">
+              <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M14.2199 21.63C13.0399 21.63 11.3699 20.8 10.0499 16.83L9.32988 14.67L7.16988 13.95C3.20988 12.63 2.37988 10.96 2.37988 9.78001C2.37988 8.61001 3.20988 6.93001 7.16988 5.60001L15.6599 2.77001C17.7799 2.06001 19.5499 2.27001 20.6399 3.35001C21.7299 4.43001 21.9399 6.21001 21.2299 8.33001L18.3999 16.82C17.0699 20.8 15.3999 21.63 14.2199 21.63ZM7.63988 7.03001C4.85988 7.96001 3.86988 9.06001 3.86988 9.78001C3.86988 10.5 4.85988 11.6 7.63988 12.52L10.1599 13.36C10.3799 13.43 10.5599 13.61 10.6299 13.83L11.4699 16.35C12.3899 19.13 13.4999 20.12 14.2199 20.12C14.9399 20.12 16.0399 19.13 16.9699 16.35L19.7999 7.86001C20.3099 6.32001 20.2199 5.06001 19.5699 4.41001C18.9199 3.76001 17.6599 3.68001 16.1299 4.19001L7.63988 7.03001Z" fill="currentColor"></path>
+                <path d="M10.11 14.4C9.92005 14.4 9.73005 14.33 9.58005 14.18C9.29005 13.89 9.29005 13.41 9.58005 13.12L13.16 9.53C13.45 9.24 13.93 9.24 14.22 9.53C14.51 9.82 14.51 10.3 14.22 10.59L10.64 14.18C10.5 14.33 10.3 14.4 10.11 14.4Z" fill="currentColor"></path>
+              </svg>
+            </span>
+            <span class="send-fx-text"><span style="--i:0">发</span><span style="--i:1">送</span></span>
+          </span>
+          <span class="send-fx-state send-fx-sent">
+            <span class="send-fx-icon">
+              <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path fill="currentColor" d="M12 22.75C6.07 22.75 1.25 17.93 1.25 12C1.25 6.07 6.07 1.25 12 1.25C17.93 1.25 22.75 6.07 22.75 12C22.75 17.93 17.93 22.75 12 22.75ZM12 2.75C6.9 2.75 2.75 6.9 2.75 12C2.75 17.1 6.9 21.25 12 21.25C17.1 21.25 21.25 17.1 21.25 12C21.25 6.9 17.1 2.75 12 2.75Z"></path>
+                <path fill="currentColor" d="M10.5795 15.5801C10.3795 15.5801 10.1895 15.5001 10.0495 15.3601L7.21945 12.5301C6.92945 12.2401 6.92945 11.7601 7.21945 11.4701C7.50945 11.1801 7.98945 11.1801 8.27945 11.4701L10.5795 13.7701L15.7195 8.6301C16.0095 8.3401 16.4895 8.3401 16.7795 8.6301C17.0695 8.9201 17.0695 9.4001 16.7795 9.6901L11.1095 15.3601C10.9695 15.5001 10.7795 15.5801 10.5795 15.5801Z"></path>
+              </svg>
+            </span>
+            <span class="send-fx-text"><span style="--i:0">已</span><span style="--i:1">发</span><span style="--i:2">送</span></span>
+          </span>
+        </button>
+      </div>
+
+      <div id="commentList" class="comment-list">
+        <div class="empty-tip">加载中...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 聊天窗口 ========== -->
+  <div class="view" id="view-chat">
+    <div class="page-wrap chat-page">
+      <div class="chat-top">
+        <div class="back-home" onclick="location.hash='#/messages'">← 消息</div>
+        <div class="chat-peer-name" id="chatPeerName">聊天</div>
+        <button class="chat-follow-btn" id="chatFollowBtn" style="display:none;">关注</button>
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        <div class="empty-tip">加载中...</div>
+      </div>
+      <div class="chat-input-bar">
+        <button class="chat-img-btn" id="chatImageBtn" title="发送图片">🖼</button>
+        <input type="file" id="chatImageInput" accept="image/*" style="display:none">
+        <input type="text" id="chatInput" maxlength="500" placeholder="输入消息，回车发送">
+        <button class="send-fx" id="chatSendBtn" type="button" aria-label="发送">
+          <span class="send-fx-outline"></span>
+          <span class="send-fx-state send-fx-default">
+            <span class="send-fx-icon">
+              <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M14.2199 21.63C13.0399 21.63 11.3699 20.8 10.0499 16.83L9.32988 14.67L7.16988 13.95C3.20988 12.63 2.37988 10.96 2.37988 9.78001C2.37988 8.61001 3.20988 6.93001 7.16988 5.60001L15.6599 2.77001C17.7799 2.06001 19.5499 2.27001 20.6399 3.35001C21.7299 4.43001 21.9399 6.21001 21.2299 8.33001L18.3999 16.82C17.0699 20.8 15.3999 21.63 14.2199 21.63ZM7.63988 7.03001C4.85988 7.96001 3.86988 9.06001 3.86988 9.78001C3.86988 10.5 4.85988 11.6 7.63988 12.52L10.1599 13.36C10.3799 13.43 10.5599 13.61 10.6299 13.83L11.4699 16.35C12.3899 19.13 13.4999 20.12 14.2199 20.12C14.9399 20.12 16.0399 19.13 16.9699 16.35L19.7999 7.86001C20.3099 6.32001 20.2199 5.06001 19.5699 4.41001C18.9199 3.76001 17.6599 3.68001 16.1299 4.19001L7.63988 7.03001Z" fill="currentColor"></path>
+                <path d="M10.11 14.4C9.92005 14.4 9.73005 14.33 9.58005 14.18C9.29005 13.89 9.29005 13.41 9.58005 13.12L13.16 9.53C13.45 9.24 13.93 9.24 14.22 9.53C14.51 9.82 14.51 10.3 14.22 10.59L10.64 14.18C10.5 14.33 10.3 14.4 10.11 14.4Z" fill="currentColor"></path>
+              </svg>
+            </span>
+            <span class="send-fx-text"><span style="--i:0">发</span><span style="--i:1">送</span></span>
+          </span>
+          <span class="send-fx-state send-fx-sent">
+            <span class="send-fx-icon">
+              <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path fill="currentColor" d="M12 22.75C6.07 22.75 1.25 17.93 1.25 12C1.25 6.07 6.07 1.25 12 1.25C17.93 1.25 22.75 6.07 22.75 12C22.75 17.93 17.93 22.75 12 22.75ZM12 2.75C6.9 2.75 2.75 6.9 2.75 12C2.75 17.1 6.9 21.25 12 21.25C17.1 21.25 21.25 17.1 21.25 12C21.25 6.9 17.1 2.75 12 2.75Z"></path>
+                <path fill="currentColor" d="M10.5795 15.5801C10.3795 15.5801 10.1895 15.5001 10.0495 15.3601L7.21945 12.5301C6.92945 12.2401 6.92945 11.7601 7.21945 11.4701C7.50945 11.1801 7.98945 11.1801 8.27945 11.4701L10.5795 13.7701L15.7195 8.6301C16.0095 8.3401 16.4895 8.3401 16.7795 8.6301C17.0695 8.9201 17.0695 9.4001 16.7795 9.6901L11.1095 15.3601C10.9695 15.5001 10.7795 15.5801 10.5795 15.5801Z"></path>
+              </svg>
+            </span>
+            <span class="send-fx-text"><span style="--i:0">已</span><span style="--i:1">发</span><span style="--i:2">送</span></span>
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+
+</div>
+
+
+
+<!-- ========== 全局：左侧浮动导航 ========== -->
+<nav class="side-nav" id="sideNav" aria-label="主导航">
+  <a class="side-nav-item" href="#/feed">
+    <span class="side-nav-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+      </svg>
+    </span>
+    <span class="side-nav-label">音浪动态</span>
+  </a>
+  <a class="side-nav-item" href="#/shop">
+    <span class="side-nav-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <path d="M16 10a4 4 0 0 1-8 0"></path>
+      </svg>
+    </span>
+    <span class="side-nav-label">音浪商城</span>
+  </a>
+  <a class="side-nav-item" href="#/messages">
+    <span class="side-nav-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"></path>
+        <path d="M22 6l-10 7L2 6"></path>
+      </svg>
+    </span>
+    <span class="side-nav-label">消息中心</span>
+  </a>
+  <a class="side-nav-item" href="#/sign">
+    <span class="side-nav-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="17" rx="2"></rect>
+        <line x1="8" y1="2" x2="8" y2="6"></line>
+        <line x1="16" y1="2" x2="16" y2="6"></line>
+        <line x1="3" y1="10" x2="21" y2="10"></line>
+        <path d="M9 15l2 2 4-4"></path>
+      </svg>
+    </span>
+    <span class="side-nav-label">签到中心</span>
+  </a>
+  <a class="side-nav-item" href="#/shop">
+    <span class="side-nav-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 8l4.5 3.5L12 5l4.5 6.5L21 8l-2 11H5L3 8z"></path>
+        <path d="M5 19h14"></path>
+      </svg>
+    </span>
+    <span class="side-nav-label">开通会员</span>
+  </a>
+</nav>
+
+<!-- ========== 全局：底部播放栏 ========== -->
+<div class="bottom-player-bar" id="bottomPlayerBar">
+  <div class="bottom-open-area" id="bottomOpenArea">
+    <img class="bottom-cover" id="bottomCover" alt="">
+    <div class="bottom-info">
+      <div class="bottom-song-name" id="bottomSongName">-</div>
+      <div class="bottom-singer" id="bottomSinger">-</div>
+    </div>
+  </div>
+  <div class="bottom-ctrl">
+    <div class="play-switch small" id="playPauseBtn" role="button" tabindex="0">
+      <span class="slider">
+        <span class="title switch-title">暂停</span>
+        <span class="ball"><span class="icon">⏸</span></span>
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 脚本 ========== -->
+<!-- 核心基础设施 -->
+<script src="/js/core/request.js"></script>
+<script src="/js/core/utils.js"></script>
+<script src="/js/core/chat.js"></script>
+<script src="/js/core/vip.js"></script>
+<script src="/js/player/audio-manager.js"></script>
+<script src="/js/player/player-ui.js"></script>
+<script src="/js/core/router.js"></script>
+<script src="/js/core/coupon-ui.js"></script>
+
+<!-- 各页面业务 -->
+<script src="/js/pages/home.js"></script>
+<script src="/js/pages/user.js"></script>
+<script src="/js/pages/collect.js"></script>
+<script src="/js/pages/history.js"></script>
+<script src="/js/pages/login.js"></script>
+<script src="/js/pages/register.js"></script>
+<script src="/js/pages/shop.js"></script>
+<script src="/js/pages/activity.js"></script>
+<script src="/js/pages/product.js"></script>
+<script src="/js/pages/cart.js"></script>
+<script src="/js/pages/address.js"></script>
+<script src="/js/pages/order-confirm.js"></script>
+<script src="/js/pages/coupon.js"></script>
+<script src="/js/pages/order-pay.js"></script>
+<script src="/js/pages/my-orders.js"></script>
+<script src="/js/pages/order-detail.js"></script>
+<script src="/js/pages/merchant-apply.js"></script>
+<script src="/js/pages/messages.js"></script>
+<script src="/js/pages/chat.js"></script>
+<script src="/js/pages/follow.js"></script>
+<script src="/js/pages/feed.js"></script>
+<script src="/js/pages/post.js"></script>
+<script src="/js/pages/merchant-shop.js"></script>
+<script src="/js/pages/profile.js"></script>
+<script src="/js/pages/sign.js"></script>
+<script src="/vendor/echarts.min.js"></script>
+<script src="/js/pages/merchant-center.js"></script>
+<!-- 入口 -->
+<script src="/js/app.js"></script>
+</body>
+</html>
