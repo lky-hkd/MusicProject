@@ -120,7 +120,11 @@ cp src/main/resources/application-dev.example.yml src/main/resources/application
 
 > ⚠️ 真实的 `application-dev.yml` 已被 `.gitignore` 忽略，**不会**被提交到 Git。
 
-### 3. 启动
+### 3. 准备音频（可选）
+
+仓库不包含歌曲文件：`src/main/resources/static/audio/` 已被 `.gitignore` 忽略。克隆后如需试听，请自行准备 mp3 放入该目录，并让 `song` 表中的 `audio_url` 指向对应文件（例如 `/audio/qilixiang.mp3`）；没有音频时页面其它功能不受影响。
+
+### 4. 启动
 
 ```bash
 mvn spring-boot:run
