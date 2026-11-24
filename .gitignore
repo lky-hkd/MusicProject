@@ -17,3 +17,12 @@ uploads/
 .vscode/ 
 .DS_Store 
 build/
+
+# 本地开发/工具产物
+.trae/
+.postman/
+.screenshots/
+*.log
+
+# 音频不随仓库分发（本地自行放置）
+src/main/resources/static/audio/
