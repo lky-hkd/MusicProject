@@ -2,9 +2,13 @@ package com.music.service.Impl;
 
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.music.common.ModerationAction;
+import com.music.common.BizException;
+import com.music.common.ModerationContentType;
 import com.music.common.Role;
 import com.music.config.ChatWebSocketHandler;
 import com.music.dto.ChatSendRequest;
+import com.music.dto.ModerationContext;
 import com.music.entity.ChatConversation;
 import com.music.entity.ChatMessage;
 import com.music.entity.Merchant;
@@ -14,6 +18,9 @@ import com.music.mapper.ChatMessageMapper;
 import com.music.mapper.MerchantMapper;
 import com.music.mapper.UserMapper;
 import com.music.service.ChatService;
+import com.music.service.ChatModerationWorker;
+import com.music.service.ModerationPenaltyService;
+import com.music.service.ModerationService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -46,6 +53,12 @@ public class ChatServiceImpl implements ChatService {
     private MerchantMapper merchantMapper;
     @Resource
     private ChatWebSocketHandler webSocketHandler;
+    @Resource
+    private ModerationService moderationService;
+    @Resource
+    private ModerationPenaltyService penaltyService;
+    @Resource
+    private ChatModerationWorker chatModerationWorker;
 
     @Override
     public List<Map<String, Object>> listConversations(Long userId) {
@@ -222,6 +235,28 @@ public class ChatServiceImpl implements ChatService {
             }
         }
 
+        // 私聊文本：高危词直接不发送；可疑词先发后审，模型判不安全后异步撤回
+        ModerationAction action = ModerationAction.ALLOW;
+        if (type == MSG_TEXT) {
+            if (penaltyService.isBanned(userId)) {
+                throw new BizException("账号已被封禁，请联系管理员");
+            }
+            if (penaltyService.isMuted(userId)) {
+                throw new BizException("你已被临时禁言，请 "
+                        + penaltyService.muteRemainingMinutes(userId) + " 分钟后再试");
+            }
+            try {
+                action = moderationService.check(ModerationContext.builder()
+                        .contentType(ModerationContentType.CHAT)
+                        .userId(userId)
+                        .content(content)
+                        .build());
+            } catch (BizException e) {
+                penaltyService.onViolation(userId);
+                throw e;
+            }
+        }
+
         ChatMessage msg = new ChatMessage();
         msg.setConversationId(conv.getId());
         msg.setSenderId(userId);
@@ -253,10 +288,16 @@ public class ChatServiceImpl implements ChatService {
 
         // 事务提交后再推送：避免事务回滚了，对方却已收到消息
         Long conversationId = conv.getId();
+        final ModerationAction decidedAction = action;
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
                 pushToBothSides(conversationId, msg, peerId, userId);
+                if (decidedAction == ModerationAction.REVIEW) {
+                    chatModerationWorker.review(msg.getId(), conversationId, userId, content);
+                } else if (decidedAction == ModerationAction.ALLOW) {
+                    chatModerationWorker.sample(msg.getId(), conversationId, userId, content);
+                }
             }
         });
         return sendView;
@@ -354,12 +395,14 @@ public class ChatServiceImpl implements ChatService {
     }
 
     private Map<String, Object> messageView(ChatMessage m, Long userId) {
+        boolean recalled = m.getStatus() != null && m.getStatus() == 1;
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("id", m.getId());
         map.put("conversationId", m.getConversationId());
         map.put("senderId", m.getSenderId());
-        map.put("content", m.getContent());
+        map.put("content", recalled ? "该消息因违规已被拦截" : m.getContent());
         map.put("type", m.getType());
+        map.put("status", recalled ? 1 : 0);
         map.put("createTime", m.getCreateTime() == null ? "" : m.getCreateTime().format(TIME_FMT));
         map.put("mine", m.getSenderId().equals(userId));
         return map;

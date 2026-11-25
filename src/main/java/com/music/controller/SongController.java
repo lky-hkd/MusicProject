@@ -23,7 +23,8 @@ public class SongController {
     public Map<String, Object> getHotSong() {
         Map<String, Object> result = new HashMap<>();
         try {
-            List<Song> list = songService.list();
+            List<Song> list = songService.list(new LambdaQueryWrapper<Song>()
+                    .eq(Song::getStatus, 0));
             result.put("success", true);
             result.put("data", list);
         } catch (Exception e) {
@@ -45,6 +46,8 @@ public class SongController {
                 limit = 10;
             }
             LambdaQueryWrapper<Song> wrapper = new LambdaQueryWrapper<>();
+            // 已下架歌曲不参与排行
+            wrapper.eq(Song::getStatus, 0);
             // 按播放量降序
             wrapper.orderByDesc(Song::getPlayCount);
             // 使用分页安全替代 last 字符串拼接
@@ -68,7 +71,7 @@ public class SongController {
         Map<String, Object> result = new HashMap<>();
         try {
             LambdaQueryWrapper<Song> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(Song::getType, type);
+            wrapper.eq(Song::getType, type).eq(Song::getStatus, 0);
             List<Song> list = songService.list(wrapper);
             result.put("success", true);
             result.put("data", list);
@@ -102,7 +105,7 @@ public class SongController {
         Map<String, Object> result = new HashMap<>();
         try {
             Song song = songService.getById(id);
-            if (song == null) {
+            if (song == null || Integer.valueOf(1).equals(song.getStatus())) {
                 result.put("success", false);
                 result.put("msg", "该歌曲不存在");
                 return result;
@@ -122,9 +125,10 @@ public class SongController {
         Map<String, Object> result = new HashMap<>();
         try {
             LambdaQueryWrapper<Song> wrapper = new LambdaQueryWrapper<>();
-            wrapper.like(Song::getSongName, keyword)
-                    .or()
-                    .like(Song::getSinger, keyword);
+            wrapper.eq(Song::getStatus, 0)
+                    .and(w -> w.like(Song::getSongName, keyword)
+                            .or()
+                            .like(Song::getSinger, keyword));
             List<Song> list = songService.list(wrapper);
             result.put("success", true);
             result.put("data", list);

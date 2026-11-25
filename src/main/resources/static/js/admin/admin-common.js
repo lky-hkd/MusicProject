@@ -66,6 +66,8 @@ const ADMIN_MENUS = [
     { key: 'shops',        title: '店铺管理',  minRole: 2, render: () => renderAdminShops() },
     { key: 'refunds',      title: '退款管理',  minRole: 2, render: () => renderAdminRefunds() },
     { key: 'vouchers',     title: '优惠券管理', minRole: 2, render: () => renderAdminVouchers() },
+    { key: 'moderation',   title: '内容审核',  minRole: 2, render: () => renderAdminModeration() },
+    { key: 'songs',        title: '音乐管理',  minRole: 2, render: () => renderAdminSongs() },
 
     { group: '商家管理', minRole: 1 },
     { key: 'mc-dashboard', title: '商家看板',  minRole: 1, render: () => renderMcDashboard() },

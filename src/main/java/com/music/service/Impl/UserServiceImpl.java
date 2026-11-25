@@ -9,13 +9,17 @@ import com.music.dto.ProfileUpdateRequest;
 import com.music.entity.SignVipRedeem;
 import com.music.entity.User;
 import com.music.entity.UserVip;
+import com.music.common.ModerationAction;
+import com.music.common.ModerationContentType;
+import com.music.dto.ModerationContext;
 import com.music.mapper.SignVipRedeemMapper;
 import com.music.mapper.UserMapper;
+import com.music.service.ModerationPendingService;
+import com.music.service.ModerationService;
 import com.music.service.UserService;
 import com.music.service.VipService;
 import com.music.util.PhoneUtil;
 import com.music.util.RandomNumberUtil;
-import com.music.util.SensitiveWordFilter;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -47,7 +51,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Resource
-    private SensitiveWordFilter sensitiveWordFilter;
+    private ModerationService moderationService;
+    @Resource
+    private ModerationPendingService moderationPendingService;
 
     @Resource
     private SignVipRedeemMapper signVipRedeemMapper;
@@ -301,14 +307,25 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         LambdaUpdateWrapper<User> update = new LambdaUpdateWrapper<>();
         update.eq(User::getId, userId);
+        boolean pending = false;
 
         if (req.getNickname() != null) {
             String nickname = req.getNickname().trim();
             if (nickname.length() < 2 || nickname.length() > 20) {
                 return Result.fail("昵称长度需要 2-20 个字符");
             }
-            sensitiveWordFilter.check(nickname);
-            update.set(User::getNickname, nickname);
+            ModerationAction action = moderationService.check(ModerationContext.builder()
+                    .contentType(ModerationContentType.NICKNAME)
+                    .userId(userId)
+                    .content(nickname)
+                    .build());
+            if (action == ModerationAction.REVIEW) {
+                // 可疑昵称不直接生效，交后台复核
+                moderationPendingService.submit(ModerationContentType.NICKNAME, userId, nickname);
+                pending = true;
+            } else {
+                update.set(User::getNickname, nickname);
+            }
         }
         if (req.getAvatar() != null) {
             String avatar = req.getAvatar().trim();
@@ -327,8 +344,21 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (req.getSignature() != null) {
             String signature = req.getSignature().trim();
             if (signature.length() > 100) return Result.fail("个性签名不能超过100字");
-            if (!signature.isEmpty()) sensitiveWordFilter.check(signature);
-            update.set(User::getSignature, signature.isEmpty() ? null : signature);
+            if (!signature.isEmpty()) {
+                ModerationAction action = moderationService.check(ModerationContext.builder()
+                        .contentType(ModerationContentType.SIGNATURE)
+                        .userId(userId)
+                        .content(signature)
+                        .build());
+                if (action == ModerationAction.REVIEW) {
+                    moderationPendingService.submit(ModerationContentType.SIGNATURE, userId, signature);
+                    pending = true;
+                } else {
+                    update.set(User::getSignature, signature.isEmpty() ? null : signature);
+                }
+            } else {
+                update.set(User::getSignature, null);
+            }
         }
         if (req.getBirthday() != null) {
             String birthday = req.getBirthday().trim();
@@ -347,8 +377,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             }
         }
 
-        update(update);
-        return Result.ok(null, "保存成功");
+        String setSql = update.getSqlSet();
+        if (setSql != null && !setSql.isBlank()) {
+            update(update);
+        }
+        return pending
+                ? Result.ok(null, "部分内容需要人工审核，审核通过后自动生效")
+                : Result.ok(null, "保存成功");
     }
 
     @Override

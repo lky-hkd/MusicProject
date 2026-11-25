@@ -3557,6 +3557,14 @@ button.del-btn:hover::before {
     background: linear-gradient(135deg, #7f7fd5, #86a8e7);
     color: #fff;
 }
+/* 违规撤回的消息：灰底虚线，弱化强调，保留占位提示 */
+.chat-msg.chat-msg-recalled .chat-bubble {
+    background: #f2f2f2;
+    color: #9a9a9a;
+    border: 1px dashed #d8d8d8;
+    box-shadow: none;
+    font-style: italic;
+}
 .chat-time {
     margin-top: 3px;
     color: #aaa;

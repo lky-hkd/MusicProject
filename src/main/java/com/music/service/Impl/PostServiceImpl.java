@@ -3,6 +3,7 @@ package com.music.service.Impl;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.music.common.BizException;
+import com.music.common.ModerationAction;
 import com.music.common.Role;
 import com.music.dto.CommentCreateRequest;
 import com.music.dto.CommentVO;
@@ -16,8 +17,11 @@ import com.music.mapper.PostCommentMapper;
 import com.music.mapper.PostLikeMapper;
 import com.music.mapper.PostMapper;
 import com.music.mapper.UserMapper;
+import com.music.common.ModerationContentType;
+import com.music.dto.ModerationContext;
+import com.music.service.ModerationSampleWorker;
+import com.music.service.ModerationService;
 import com.music.service.PostService;
-import com.music.util.SensitiveWordFilter;
 import jakarta.annotation.Resource;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -33,6 +37,8 @@ public class PostServiceImpl implements PostService {
 
     private static final int STATUS_NORMAL = 0;
     private static final int STATUS_DELETED = 1;
+    /** 待审：可疑内容先隐藏，等管理员在后台通过或驳回 */
+    private static final int STATUS_PENDING = 2;
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     @Resource
@@ -44,7 +50,9 @@ public class PostServiceImpl implements PostService {
     @Resource
     private UserMapper userMapper;
     @Resource
-    private SensitiveWordFilter sensitiveWordFilter;
+    private ModerationService moderationService;
+    @Resource
+    private ModerationSampleWorker moderationSampleWorker;
 
     @Override
     public List<PostVO> feed(Long userId, String tab, Long lastId, int size) {
@@ -58,7 +66,12 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public PostVO detail(Long userId, Long postId) {
-        Post post = requirePost(postId);
+        Post post = postMapper.selectById(postId);
+        // 待审内容仅作者本人可见，其他人按不存在处理
+        if (post == null || Objects.equals(post.getStatus(), STATUS_DELETED)
+                || (!Objects.equals(post.getStatus(), STATUS_NORMAL) && !post.getUserId().equals(userId))) {
+            throw new BizException("动态不存在或已删除");
+        }
         boolean liked = postLikeMapper.selectCount(new QueryWrapper<PostLike>()
                 .eq("post_id", postId).eq("user_id", userId)) > 0;
         return toVO(post, userId, userMapper.selectById(post.getUserId()), liked);
@@ -79,7 +92,11 @@ public class PostServiceImpl implements PostService {
                 throw new BizException("图片地址不合法");
             }
         }
-        sensitiveWordFilter.check(content);
+        ModerationAction action = moderationService.check(ModerationContext.builder()
+                .contentType(ModerationContentType.POST)
+                .userId(userId)
+                .content(content)
+                .build());
 
         Post post = new Post();
         post.setUserId(userId);
@@ -87,10 +104,21 @@ public class PostServiceImpl implements PostService {
         post.setImages(images.isEmpty() ? null : JSON.toJSONString(images));
         post.setLikeCount(0);
         post.setCommentCount(0);
-        post.setStatus(STATUS_NORMAL);
+        // 可疑内容落为待审：列表不展示，等管理员复核
+        post.setStatus(action == ModerationAction.REVIEW ? STATUS_PENDING : STATUS_NORMAL);
         post.setCreateTime(LocalDateTime.now());
         post.setUpdateTime(LocalDateTime.now());
         postMapper.insert(post);
+
+        // 已经过模型复核的内容不再抽检，避免重复调用
+        if (action != ModerationAction.REVIEW) {
+            moderationSampleWorker.sample(ModerationContext.builder()
+                    .contentType(ModerationContentType.POST)
+                    .contentId(post.getId())
+                    .userId(userId)
+                    .content(content)
+                    .build());
+        }
 
         return toVO(post, userId, userMapper.selectById(userId), false);
     }
@@ -174,7 +202,11 @@ public class PostServiceImpl implements PostService {
         String content = req.getContent() == null ? "" : req.getContent().trim();
         if (content.isEmpty()) throw new BizException("评论不能为空");
         if (content.length() > 500) throw new BizException("评论不能超过500字");
-        sensitiveWordFilter.check(content);
+        ModerationAction action = moderationService.check(ModerationContext.builder()
+                .contentType(ModerationContentType.COMMENT)
+                .userId(userId)
+                .content(content)
+                .build());
 
         Long replyToUserId = req.getReplyToUserId();
         if (replyToUserId != null && userMapper.selectById(replyToUserId) == null) {
@@ -186,10 +218,19 @@ public class PostServiceImpl implements PostService {
         comment.setUserId(userId);
         comment.setContent(content);
         comment.setReplyToUserId(replyToUserId);
-        comment.setStatus(STATUS_NORMAL);
+        comment.setStatus(action == ModerationAction.REVIEW ? STATUS_PENDING : STATUS_NORMAL);
         comment.setCreateTime(LocalDateTime.now());
         postCommentMapper.insert(comment);
         postMapper.incrComment(postId);
+
+        if (action != ModerationAction.REVIEW) {
+            moderationSampleWorker.sample(ModerationContext.builder()
+                    .contentType(ModerationContentType.COMMENT)
+                    .contentId(comment.getId())
+                    .userId(userId)
+                    .content(content)
+                    .build());
+        }
 
         Set<Long> ids = new HashSet<>();
         ids.add(userId);

@@ -33,5 +33,8 @@ public class ChatMessage {
     /** 0 未读 1 已读 */
     private Integer isRead;
 
+    /** 0 正常 1 违规撤回 */
+    private Integer status;
+
     private LocalDateTime createTime;
 }

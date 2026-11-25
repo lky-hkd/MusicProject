@@ -26,6 +26,9 @@ public class Song {
     // 0=免费 1=VIP专属
     private Integer isVip;
 
+    // 0=上架 1=已下架（下架后前台不展示）
+    private Integer status;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     

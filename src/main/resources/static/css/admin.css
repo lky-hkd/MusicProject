@@ -118,3 +118,17 @@
   .admin-menu-group { display: none; }
   .admin-sidebar-footer { border-top: none; padding: 10px 16px; }
 }
+/* ---- 内容审核 / 音乐管理 ---- */
+.admin-hint {
+    margin: 0 0 12px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #8a8a8a;
+    background: #f7f8fa;
+    border-left: 3px solid #7f7fd5;
+    border-radius: 4px;
+}
+.am-content {
+    max-width: 420px;
+    word-break: break-word;
+}

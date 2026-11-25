@@ -50,6 +50,8 @@
 
         const div = document.createElement('div');
         div.className = 'chat-msg ' + (m.mine ? 'mine' : 'peer');
+        if (m.id) div.dataset.msgId = m.id;
+        if (Number(m.status) === 1) div.classList.add('chat-msg-recalled');
         const bubble = m.type === 1
             ? `<img class="chat-img" src="${m.content}" onclick="window.open(this.src)">`
             : escapeHtml(m.content);
@@ -218,6 +220,18 @@
         }
 
         ChatClient.on(data => {
+            if (data.event === 'recall') {
+                const view = document.getElementById('view-chat');
+                if (!view || !view.classList.contains('active')) return;
+                if (Number(data.conversationId) !== currentConvId) return;
+                const node = document.querySelector(`[data-msg-id="${data.id}"]`);
+                if (node) {
+                    node.classList.add('chat-msg-recalled');
+                    const bubbleEl = node.querySelector('.chat-bubble');
+                    if (bubbleEl) bubbleEl.textContent = data.content;
+                }
+                return;
+            }
             if (data.event !== 'message') return;
             const view = document.getElementById('view-chat');
             if (!view || !view.classList.contains('active')) return;

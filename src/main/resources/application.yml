@@ -44,6 +44,28 @@ app:
   seckill:
     hot-product-qps: ${SECKILL_HOT_QPS:20}
     hot-product-window-seconds: ${SECKILL_HOT_WINDOW:3}
+  moderation:
+    # 是否启用模型复核；false 时可疑词只记日志并放行
+    enabled: ${MODERATION_ENABLED:true}
+    # OpenAI 兼容接口（Ollama / LM Studio / vLLM）
+    endpoint: ${MODERATION_ENDPOINT:http://127.0.0.1:11434/v1/chat/completions}
+    # 换成你本地实际的模型名
+    model: ${MODERATION_MODEL:rafunga/qwen3guard-gen:4b}
+    api-key: ${MODERATION_API_KEY:}
+    timeout-ms: ${MODERATION_TIMEOUT_MS:3000}
+    # json=通用指令模型（按提示词输出 JSON）；guard=Qwen3Guard-Gen（Safety/Unsafe/Controversial）
+    response-format: ${MODERATION_RESPONSE_FORMAT:guard}
+    # 模型常驻时长，避免 60 秒冷加载；vLLM 等非 Ollama 后端会跳过预热
+    keep-alive: ${MODERATION_KEEP_ALIVE:24h}
+    warmup-enabled: ${MODERATION_WARMUP_ENABLED:true}
+    # 审计保留天数，<=0 表示不自动清理
+    audit-retention-days: ${MODERATION_AUDIT_RETENTION_DAYS:90}
+    # 模型判定 block 的最低置信度，低于该值降为 REVIEW
+    block-confidence: ${MODERATION_BLOCK_CONFIDENCE:0.75}
+    # 无命中内容的异步抽检比例（0 表示关闭）
+    sample-rate: ${MODERATION_SAMPLE_RATE:0.03}
+    # 短于该长度的内容不参与抽检
+    sample-min-length: ${MODERATION_SAMPLE_MIN_LENGTH:10}
   cookie:
     secure: ${COOKIE_SECURE:false}
     http-only: true

@@ -66,6 +66,12 @@ public class AuthInterceptor implements HandlerInterceptor {
         stringRedisTemplate.expire(
                 com.music.common.RedisConstants.LOGIN_TOKEN_KEY + userId, TOKEN_TTL);
 
+        // 封禁用户直接拒绝（多次违规触发，见 ModerationPenaltyService）
+        if (Boolean.TRUE.equals(stringRedisTemplate.hasKey(
+                com.music.service.ModerationPenaltyService.BAN_KEY_PREFIX + userId))) {
+            return reject(response, "账号已被封禁，请联系管理员");
+        }
+
         request.setAttribute(UserContext.USER_ID_ATTR, userId);
         request.setAttribute(UserContext.ROLE_ATTR, role);   // 新增
 

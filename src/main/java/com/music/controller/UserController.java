@@ -137,6 +137,10 @@ public class UserController {
         }
 
         User dbUser = userService.getOne(new LambdaQueryWrapper<User>().eq(User::getPhone, loginUser.getPhone()));
+        if (dbUser != null && dbUser.getBannedUntil() != null
+                && dbUser.getBannedUntil().isAfter(java.time.LocalDateTime.now())) {
+            return Result.fail("账号已被封禁，请联系管理员");
+        }
         if (dbUser != null && Integer.valueOf(0).equals(dbUser.getPasswordSet())) {
             return Result.fail("该账号尚未设置密码，请使用短信登录或找回密码");
         }

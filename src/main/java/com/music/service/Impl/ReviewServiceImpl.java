@@ -17,8 +17,12 @@ import com.music.mapper.OrderMapper;
 import com.music.mapper.ProductMapper;
 import com.music.mapper.ProductReviewMapper;
 import com.music.mapper.UserMapper;
+import com.music.common.ModerationAction;
+import com.music.common.ModerationContentType;
+import com.music.dto.ModerationContext;
+import com.music.service.ModerationSampleWorker;
+import com.music.service.ModerationService;
 import com.music.service.ReviewService;
-import com.music.util.SensitiveWordFilter;
 import jakarta.annotation.Resource;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -36,6 +40,8 @@ public class ReviewServiceImpl implements ReviewService {
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final int STATUS_NORMAL = 0;
     private static final int STATUS_HIDDEN = 1;
+    /** 待审：可疑评价先隐藏，等管理员复核 */
+    private static final int STATUS_PENDING = 2;
 
     @Resource
     private ProductReviewMapper reviewMapper;
@@ -50,7 +56,9 @@ public class ReviewServiceImpl implements ReviewService {
     @Resource
     private MerchantContext merchantContext;
     @Resource
-    private SensitiveWordFilter sensitiveWordFilter;
+    private ModerationService moderationService;
+    @Resource
+    private ModerationSampleWorker moderationSampleWorker;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -76,7 +84,11 @@ public class ReviewServiceImpl implements ReviewService {
         String content = req.getContent() == null ? "" : req.getContent().trim();
         if (content.isEmpty()) throw new BizException("评价内容不能为空");
         if (content.length() > 500) throw new BizException("评价内容不能超过500字");
-        sensitiveWordFilter.check(content);
+        ModerationAction action = moderationService.check(ModerationContext.builder()
+                .contentType(ModerationContentType.REVIEW)
+                .userId(userId)
+                .content(content)
+                .build());
 
         List<String> images = req.getImages() == null ? new ArrayList<>() : req.getImages();
         if (images.size() > 3) throw new BizException("最多上传3张图片");
@@ -98,12 +110,21 @@ public class ReviewServiceImpl implements ReviewService {
         review.setContent(content);
         review.setImages(images.isEmpty() ? null : JSON.toJSONString(images));
         review.setAnonymous(Boolean.TRUE.equals(req.getAnonymous()) ? 1 : 0);
-        review.setStatus(STATUS_NORMAL);
+        review.setStatus(action == ModerationAction.REVIEW ? STATUS_PENDING : STATUS_NORMAL);
         review.setCreateTime(LocalDateTime.now());
         try {
             reviewMapper.insert(review);
         } catch (DuplicateKeyException e) {
             throw new BizException("该商品已经评价过了");
+        }
+
+        if (action != ModerationAction.REVIEW) {
+            moderationSampleWorker.sample(ModerationContext.builder()
+                    .contentType(ModerationContentType.REVIEW)
+                    .contentId(review.getId())
+                    .userId(userId)
+                    .content(content)
+                    .build());
         }
 
         reviewMapper.recalcStats(review.getProductId());
@@ -210,7 +231,7 @@ public class ReviewServiceImpl implements ReviewService {
         String text = content == null ? "" : content.trim();
         if (text.isEmpty()) throw new BizException("回复内容不能为空");
         if (text.length() > 500) throw new BizException("回复不能超过500字");
-        sensitiveWordFilter.check(text);
+        moderationService.check(text);
 
         ProductReview review = reviewMapper.selectById(reviewId);
         if (review == null || !Objects.equals(review.getStatus(), STATUS_NORMAL)) {

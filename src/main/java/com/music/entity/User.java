@@ -30,6 +30,9 @@ public class User {
     /** 是否真正设置过密码：0 短信登录自动建号，1 已设置 */
     private Integer passwordSet;
 
+    /** 封禁截止时间，为空表示未封禁 */
+    private LocalDateTime bannedUntil;
+
     // ---- VIP 状态(瞬态,不落库,仅 getUserInfo 返回用) ----
     @TableField(exist = false)
     private Boolean vip;
